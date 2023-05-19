@@ -1,13 +1,44 @@
+<script>
+    import { loggedInUser } from "$lib/stores.js";
+    import { PUBLIC_API_URL } from "$env/static/public";
+    import { goto } from "$app/navigation";
+
+    let username;
+    let password;
+
+    function validateFormAndTryLogin() {
+        if (typeof username !== "string" || typeof password !== "string") {
+            return false;
+        }
+        let url = new URL("/login", PUBLIC_API_URL);
+        const sendRequest = () => {
+            fetch(url.toString(), {
+                method: "POST",
+                body: JSON.stringify({username, password})
+            }).then(response => {
+                if (response.ok) {
+                    return response.json();
+                }
+                throw new Error("Login failed: " + response.statusText);
+            }).then(jsonObj => {
+                localStorage.setItem("loggedInUser", JSON.stringify(jsonObj));
+                loggedInUser.set(jsonObj);
+                goto("/dashboard");
+            }).catch(error => console.log(error));
+        };
+        sendRequest();
+    }
+</script>
 <h1>Login</h1>
 <section>
-    <form action="?/validateAndTryLogin" method="post">
+    <form id="login-form" method="post">
         <label for="username">Username</label>
-        <input name="username" id="username" type="text" required />
+        <input name="username" id="username" type="text" bind:value={username} required />
 
         <label for="password">Password</label>
-        <input name="password" id="password" type="password" required />
+        <input name="password" id="password" type="password" bind:value={password} required />
 
-        <input type="submit" value="Submit"/>
+        <input type="submit" value="Submit" on:click|preventDefault={validateFormAndTryLogin} />
     </form>
 </section>
 
