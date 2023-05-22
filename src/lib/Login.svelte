@@ -34,6 +34,8 @@
                 else {
                     loginError = "Server is down";
                 }
+                // The message will disappear after 10 seconds.
+                setTimeout(() => loginError = undefined, 10000);
             });
         };
         sendRequest();
@@ -51,9 +53,9 @@
         <label for="password">Password</label>
         <input name="password" id="password" type="password" bind:value={password} required />
 
+        <input type="submit" value="Submit" on:click|preventDefault={validateFormAndTryLogin} />
         <a href="#">Forgot Username?</a>
         <a href="#">Forgot Password?</a>
-        <input type="submit" value="Submit" on:click|preventDefault={validateFormAndTryLogin} />
     </form>
 </section>
 
@@ -90,6 +92,8 @@
     }
     section form a {
         color: rgba(144,128,39,1);
+        width: 100%;
+        text-align: center;
     }
     #error-message {
         background-color: rgb(133, 48, 48);

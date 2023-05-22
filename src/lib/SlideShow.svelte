@@ -38,24 +38,33 @@
         slideIndex = (slideIndex + 1) % quotes.length;
     }
 
+    function goToSlide(index) {
+        if (index < 0 || index >= quotes.length) {
+            return;
+        }
+        clearInterval(intervalId);
+        slideIndex = index;
+        intervalId = setInterval(showNextSlide, timeout);
+    }
+
     intervalId = setInterval(showNextSlide, timeout);
 </script>
 
 <section class="slideshow">
     {#each quotes as quote, index}
-        <section
-            class="slide fade"
-            style="display: {index === slideIndex ? 'block' : 'none'}"
-        >
-            <img class="slide-image" src={quote.quote_img} alt="quote{index}" />
-            <p class="slide-quote">{quote.quote_msg}</p>
-            <p class="slide-quote-by">by {quote.quote_by}</p>
-        </section>
+        {#if index === slideIndex}
+            <section class="slide fade">
+                <img class="slide-image" src={quote.quote_img} alt="quote{index}" />
+                <p class="slide-quote">{quote.quote_msg}</p>
+                <p class="slide-quote-by">by {quote.quote_by}</p>
+            </section>
+        {/if}
     {/each}
 
     <section class="slide-dots">
         {#each quotes as { }, index}
-            <span class="dot" class:active={index === slideIndex} />
+            <!-- svelte-ignore a11y-click-events-have-key-events -->
+            <span class="dot" class:active={index === slideIndex} on:click={() => goToSlide(index)} />
         {/each}
     </section>
 </section>
@@ -100,6 +109,7 @@
         display: inline-block;
         transition: background-color 0.6s ease;
         margin: 0px 2px;
+        cursor: pointer;
     }
     .active {
         background-color: #717171;
