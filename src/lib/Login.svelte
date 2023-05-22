@@ -5,6 +5,7 @@
 
     let username;
     let password;
+    let loginError;
 
     function validateFormAndTryLogin() {
         if (typeof username !== "string" || typeof password !== "string") {
@@ -19,12 +20,21 @@
                 if (response.ok) {
                     return response.json();
                 }
-                throw new Error("Login failed: " + response.statusText);
+                throw new Error(response.statusText, {
+                    cause: response.status
+                });
             }).then(jsonObj => {
                 localStorage.setItem("loggedInUser", JSON.stringify(jsonObj));
                 loggedInUser.set(jsonObj);
                 goto("/dashboard");
-            }).catch(error => console.log(error));
+            }).catch(error => {
+                if ("cause" in error) {
+                    loginError = error.message;
+                }
+                else {
+                    loginError = "Server is down";
+                }
+            });
         };
         sendRequest();
     }
@@ -32,12 +42,17 @@
 <h1>Login</h1>
 <section>
     <form id="login-form" method="post">
+        {#if loginError !== undefined}
+        <p id="error-message" bind:innerHTML={loginError} contenteditable="false"></p>
+        {/if}
         <label for="username">Username</label>
         <input name="username" id="username" type="text" bind:value={username} required />
 
         <label for="password">Password</label>
         <input name="password" id="password" type="password" bind:value={password} required />
 
+        <a href="#">Forgot Username?</a>
+        <a href="#">Forgot Password?</a>
         <input type="submit" value="Submit" on:click|preventDefault={validateFormAndTryLogin} />
     </form>
 </section>
@@ -72,5 +87,16 @@
     }
     section form input[type=submit]:hover {
         background-color: rgb(238, 218, 103);
+    }
+    section form a {
+        color: rgba(144,128,39,1);
+    }
+    #error-message {
+        background-color: rgb(133, 48, 48);
+        color: white;
+        width: 100%;
+        border: none;
+        text-align: center;
+        padding: 1%;
     }
 </style>

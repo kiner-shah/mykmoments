@@ -5,8 +5,8 @@ export const ssr = false;
 
 export function load() {
     const user = localStorage.getItem("loggedInUser");
-    if (user) {
-        loggedInUser.set(JSON.parse(user));
-        throw redirect(303, "/");
+    if (!user) {
+        throw redirect(303, "/login");
     }
+    loggedInUser.set(JSON.parse(user));
 }

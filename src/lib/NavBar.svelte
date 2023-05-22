@@ -35,10 +35,17 @@
                     loggedInUser.set();
                     location.href = "/";
                 }
-                else {
-                    alert("Cannot logout - internal error");
+                throw new Error(response.statusText, {
+                    cause: response.status
+                });
+            }).catch(error => {
+                if ("cause" in error) {
+                    loginError = error.message;
                 }
-            }).catch(error => console.log(error));
+                else {
+                    loginError = "Server is down";
+                }
+            });
         };
         sendRequest();
     }
