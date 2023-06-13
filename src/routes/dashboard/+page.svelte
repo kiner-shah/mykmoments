@@ -1,7 +1,10 @@
 <script>
+    import { goto } from "$app/navigation";
     // 20 December 2012 at 08:30:00 pm
     // const event = new Date(Date.UTC(2012, 11, 20, 15, 0, 0));
     // console.log(event.toLocaleString('en-GB', { dateStyle: 'long', timeStyle: 'medium', timeZone: 'IST', hour12: 'true' }));
+
+    // TODO: replace with data fetched from backend
     let moment_count = 2;
 
     let moments_per_page = [10, 20, 50, 100];
@@ -10,8 +13,10 @@
     let page_range_start = 0;
     const page_range_length = 10;
     let current_page = 1;
+    // TODO: replace with data fetched from backend
     let max_pages = 100;
 
+    // TODO: replace with data fetched from backend
     let moments_data = [
         {
             id: "moment0",
@@ -54,12 +59,32 @@
                 page_range_start
         );
     }
+
+    let to_delete_moment;
+    function confirmAndDeleteMoment(moment) {
+        to_delete_moment = moment;
+    }
 </script>
 
 <svelte:head>
     <title>Dashboard</title>
 </svelte:head>
 
+{#if to_delete_moment}
+<section id="delete-dialog">
+    <form>
+        <p><b>You are about to delete the moment titled:</b></p>
+        <h3>{to_delete_moment.title}</h3>
+        <p><b>Deleting a moment will erase all data associated with this moment and cannot be recovered.</b></p>
+        <p><b>Are you sure you want to delete this moment?</b></p>
+        <p>Type <q>I want to delete this moment</q> in the below text box to confirm deletion and then click on Delete button</p>
+
+        <input type="text" on:paste={() => false}>
+        <button class="delete-dialog-button" on:click={() => { to_delete_moment = undefined; }}>Cancel</button>
+        <button class="delete-dialog-button">Delete</button>
+    </form>
+</section>
+{/if}
 <section id="moments-header">
     <section id="moments-summary">
         <h3>Total moments: {moment_count}</h3>
@@ -98,7 +123,11 @@
                         <span>Created {moment.created_date_time}</span> &#8226
                         <span>Last modified {moment.last_edit_date_time}</span>
                     </section>
-                    <button on:click={() => {}}>Read more</button>
+                    <section class="moments-options">
+                        <button class="moments-option-item" on:click={() => goto("/show/" + moment.id)}>&#128065</button>
+                        <button class="moments-option-item" on:click={() => goto("/edit/" + moment.id)}>&#128393</button>
+                        <button class="moments-option-item delete-moment-option" on:click={() => confirmAndDeleteMoment(moment)}>&#128465</button>
+                    </section>
                 </section>
             </section>
         </section>
@@ -141,6 +170,29 @@
 </section>
 
 <style>
+    #delete-dialog {
+        position: fixed;
+        width: 100%;
+        height: 100%;
+        top: 0px;
+        left: 0px;
+        background-color: rgba(0, 0, 0, 0.541);
+    }
+    #delete-dialog form {
+        background-color: white;
+        width: 50%;
+        margin-top: 50vh;
+        transform: translateY(-25vh);
+        margin-left: auto;
+        margin-right: auto;
+        padding: 5%;
+        text-align: center;
+    }
+    #delete-dialog form input[type=text] {
+        width: 100%;
+        margin-bottom: 2%;
+    }
+
     #moments-summary,
     #moments-search-bar-and-sort {
         display: flex;
@@ -227,5 +279,27 @@
         font-size: 0.75em;
         margin-top: 1%;
         align-items: center;
+        width: 100%;
+    }
+    .moments-options {
+        display: flex;
+        column-gap: 5px;
+        width: 50%;
+        justify-content: flex-end;
+    }
+    .moments-option-item {
+        padding: 0%;
+        font-size: 2em;
+        background-color: inherit;
+    }
+    .moments-option-item:hover {
+        color: black;
+        background-color: inherit;
+    }
+    .delete-moment-option {
+        color: darkred;
+    }
+    .delete-moment-option:hover {
+        color: red;
     }
 </style>

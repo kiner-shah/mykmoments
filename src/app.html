@@ -1,26 +1,38 @@
 <!DOCTYPE html>
 <html lang="en">
-	<head>
-		<meta charset="utf-8" />
-		<link rel="icon" href="%sveltekit.assets%/favicon.png" />
-		<meta name="viewport" content="width=device-width" />
-		%sveltekit.head%
-		<style>
-			* {
-				box-sizing: border-box;
-			}
-			body {
-				margin-top: 0px;
-				margin-bottom: 0px;
-				margin-left: auto;
-				margin-right: auto;
-				max-width: 80vw;
-				font-family: 'Trebuchet MS', 'Lucida Sans Unicode', 'Lucida Grande', 'Lucida Sans', Arial, sans-serif;
-			}
-		</style>
-	</head>
-	
-	<body data-sveltekit-preload-data="hover">
-		<div style="display: contents">%sveltekit.body%</div>
-	</body>
+
+<head>
+	<meta charset="utf-8" />
+	<link rel="icon" href="%sveltekit.assets%/favicon.png" />
+	<meta name="viewport" content="width=device-width" />
+	%sveltekit.head%
+	<style>
+		* {
+			box-sizing: border-box;
+		}
+
+		@font-face {
+			font-family: "Lobster-Regular";
+			src: url("/fonts/Lobster-Regular/Lobster-Regular.ttf");
+		}
+		@font-face {
+			font-family: "LobsterTwo-Regular";
+			src: url("/fonts/Lobster-Two/LobsterTwo-Regular.ttf");
+		}
+
+		body {
+			margin-top: 0px;
+			margin-bottom: 0px;
+			margin-left: auto;
+			margin-right: auto;
+			max-width: 80vw;
+			font-family: 'Trebuchet MS', 'Lucida Sans Unicode', 'Lucida Grande', 'Lucida Sans', Arial, sans-serif;
+		}
+	</style>
+</head>
+
+<body data-sveltekit-preload-data="hover">
+	<div style="display: contents">%sveltekit.body%</div>
+</body>
+
 </html>

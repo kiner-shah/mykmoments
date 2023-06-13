@@ -53,7 +53,7 @@
 
 <nav id="navbar">
     <img
-        src="logo1.png"
+        src="/logo1.png"
         alt="logo"
         on:click={onLogoClick}
         on:keydown={onLogoClick}
