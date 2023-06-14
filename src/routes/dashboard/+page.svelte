@@ -88,7 +88,7 @@
 <section id="moments-header">
     <section id="moments-summary">
         <h3>Total moments: {moment_count}</h3>
-        <button id="add-new-moment">Add New Moment</button>
+        <button id="add-new-moment" on:click={() => goto("/addmoment")}>Add New Moment</button>
     </section>
     <section id="moments-search-bar-and-sort">
         <input type="search" id="searchbar" placeholder="Search title" />
@@ -125,7 +125,7 @@
                     </section>
                     <section class="moments-options">
                         <button class="moments-option-item" on:click={() => goto("/show/" + moment.id)}>&#128065</button>
-                        <button class="moments-option-item" on:click={() => goto("/edit/" + moment.id)}>&#128393</button>
+                        <button class="moments-option-item" on:click={() => goto("/update/" + moment.id)}>&#128393</button>
                         <button class="moments-option-item delete-moment-option" on:click={() => confirmAndDeleteMoment(moment)}>&#128465</button>
                     </section>
                 </section>
