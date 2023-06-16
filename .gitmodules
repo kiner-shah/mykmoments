@@ -1,0 +1,6 @@
+[submodule "restapi/external/libpqxx"]
+	path = restapi/external/libpqxx
+	url = git@github.com:jtv/libpqxx.git
+[submodule "restapi/external/Crow"]
+	path = restapi/external/Crow
+	url = git@github.com:CrowCpp/Crow.git
