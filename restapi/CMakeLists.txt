@@ -2,6 +2,7 @@ cmake_minimum_required(VERSION 3.15)
 project(MyKMomentsRestAPI LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_INSTALL_PREFIX ${CMAKE_BINARY_DIR}/installdir)
 
 # for SSL/TLS connections
 find_package(OpenSSL REQUIRED)
@@ -25,7 +26,24 @@ add_subdirectory(external/Crow)
 set(SKIP_BUILD_TEST ON)
 add_subdirectory(external/libpqxx)
 
+# Json Web Tokens
+# set(JWT_BUILD_EXAMPLES OFF)
+# add_subdirectory(external/jwt-cpp)
+include(ExternalProject)
+ExternalProject_Add(jwt-cpp
+    SOURCE_DIR ${CMAKE_SOURCE_DIR}/external/jwt-cpp
+    INSTALL_DIR ${CMAKE_INSTALL_PREFIX}
+    CMAKE_ARGS -DSKIP_BUILD_TEST=ON -DCMAKE_INSTALL_PREFIX=${CMAKE_INSTALL_PREFIX}
+)
+
+ExternalProject_Get_property(jwt-cpp INSTALL_DIR)
+
 # TODO: add sources
 
 add_executable(MyKMomentsRestAPI src/main.cpp)
+add_dependencies(MyKMomentsRestAPI jwt-cpp)
+
+# for jwt-cpp headers
+target_include_directories(MyKMomentsRestAPI PRIVATE ${CMAKE_INSTALL_PREFIX}/include)
+
 target_link_libraries(MyKMomentsRestAPI PRIVATE ZLIB::ZLIB OpenSSL::SSL OpenSSL::Crypto Crow::Crow pqxx)

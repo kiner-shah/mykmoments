@@ -4,3 +4,6 @@
 [submodule "restapi/external/Crow"]
 	path = restapi/external/Crow
 	url = git@github.com:CrowCpp/Crow.git
+[submodule "restapi/external/jwt-cpp"]
+	path = restapi/external/jwt-cpp
+	url = git@github.com:Thalhammer/jwt-cpp.git
