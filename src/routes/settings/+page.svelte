@@ -1,8 +1,10 @@
+<script>
+</script>
 <svelte:head>
-    <title>About</title>
+    <title>Settings</title>
 </svelte:head>
 
-<h1>About</h1>
+<h1>Settings</h1>
 
 <style>
     h1 {

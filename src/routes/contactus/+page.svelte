@@ -2,6 +2,10 @@
     <title>Contact Us</title>
 </svelte:head>
 
-<section>
-    <h3>Contact Us</h3>
-</section>
+<h1>Contact Us</h1>
+
+<style>
+    h1 {
+        text-align: center;
+    }
+</style>

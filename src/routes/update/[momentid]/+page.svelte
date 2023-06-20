@@ -43,7 +43,7 @@
 
     <section id="form-buttons">
         <button>Save</button>
-        <button on:click={() => window.location.replace("/dashboard")}>Cancel</button>
+        <button type="button" on:click={() => goto("/dashboard")}>Cancel</button>
     </section>
 </form>
 

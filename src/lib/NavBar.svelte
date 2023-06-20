@@ -70,8 +70,8 @@
             <a href="#" id="profile-menu-expand" on:click|preventDefault={toggleProfileMenu}>{$loggedInUser.username} ▼</a>
 
             <section id="profile-menu-options">
-                <button>Edit profile</button>
-                <button>Settings</button>
+                <button on:click={() => goto("/editprofile")}>Edit profile</button>
+                <button on:click={() => goto("/settings")}>Settings</button>
                 <button on:click={logout}>Logout</button>
             </section>
         </section>
