@@ -30,7 +30,7 @@ let moments_data = [
 ];
 
 export function load({params}) {
-    const user = localStorage.getItem("loggedInUser");
+    const user = sessionStorage.getItem("loggedInUser");
     if (!user) {
         throw redirect(303, "/login");
     }

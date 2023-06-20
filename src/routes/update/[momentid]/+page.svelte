@@ -3,7 +3,12 @@
 
     export let data;
 
+    const feelings = ["happy", "sad", "angry", "scared"];
+
     const max_description_length = 2000;
+    function getDateString(created_date_time) {
+        return new Date(created_date_time).toISOString().substring(0,10);
+    }
 </script>
 
 <form>
@@ -16,16 +21,21 @@
 
     <label for="moment-feelings">How do you feel?</label>
     <section id="moment-feelings">
-        <input type="checkbox" id="happy">
-        <label for="happy">Happy</label>
-        <input type="checkbox" id="sad">
-        <label for="sad">Sad</label>
+        {#each feelings as feeling}
+            <input type="checkbox" id={feeling} value={feeling}>
+            <label for={feeling}>{feeling[0].toUpperCase() + feeling.slice(1)}</label>
+        {/each}
     </section>
 
     <p>Current image associated with this moment: {data.moment.image_url}</p>
     <section id="moment-image-section">
         <label for="moment-image">Change image</label>
         <input name="moment-image" id="moment-image" type="file" accept=".png,.jpg">
+    </section>
+
+    <section id="moment-date-section">
+        <label for="moment-date">Date</label>
+        <input type="date" id="moment-date" name="moment-date" value={getDateString(data.moment.created_date_time)}>
     </section>
 
     <label for="moment-image-caption">Image Caption</label>
@@ -59,6 +69,9 @@
     }
     #moment-image-section {
         display: block;
+    }
+    #moment-date-section {
+        margin-bottom: 1%;
     }
     #moment-description-chars-left {
         margin-top: 0%;

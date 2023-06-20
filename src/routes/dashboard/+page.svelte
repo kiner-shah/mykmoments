@@ -61,8 +61,18 @@
     }
 
     let to_delete_moment;
+    let delete_confirmation_input_text = '';
+    const delete_confirmation_text = "I want to delete this moment";
+    let delete_not_allowed = true;
     function confirmAndDeleteMoment(moment) {
         to_delete_moment = moment;
+        delete_confirmation_input_text = '';
+    }
+    function checkDeleteConfirmInputText() {
+        delete_not_allowed = true;
+        if (delete_confirmation_input_text === delete_confirmation_text) {
+            delete_not_allowed = false;
+        }
     }
 </script>
 
@@ -79,9 +89,9 @@
         <p><b>Are you sure you want to delete this moment?</b></p>
         <p>Type <q>I want to delete this moment</q> in the below text box to confirm deletion and then click on Delete button</p>
 
-        <input type="text" on:paste={() => false}>
-        <button class="delete-dialog-button" on:click={() => { to_delete_moment = undefined; }}>Cancel</button>
-        <button class="delete-dialog-button">Delete</button>
+        <input type="text" on:paste={() => false} bind:value={delete_confirmation_input_text} on:keyup={() => checkDeleteConfirmInputText()} />
+        <button id="delete-dialog-cancel-button" on:click={() => { to_delete_moment = undefined; }}>Cancel</button>
+        <button id="delete-dialog-delete-button" disabled={delete_not_allowed}>Delete</button>
     </form>
 </section>
 {/if}
@@ -295,6 +305,24 @@
     .moments-option-item:hover {
         color: black;
         background-color: inherit;
+    }
+    #delete-dialog-cancel-button {
+        border: 1px solid black;
+        background-color: white;
+        color: black;
+    }
+    #delete-dialog-cancel-button:hover {
+        background-color: rgb(224, 221, 221);
+    }
+    #delete-dialog-delete-button {
+        border: 1px solid red;
+        background-color: red;
+        color: white;
+    }
+    #delete-dialog-delete-button:hover,
+    #delete-dialog-delete-button:disabled {
+        background-color: rgb(192, 1, 1);
+        border: 1px solid rgb(192,1,1);
     }
     .delete-moment-option {
         color: darkred;

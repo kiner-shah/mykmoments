@@ -31,7 +31,7 @@
                 method: "POST"
             }).then(response => {
                 if (response.ok) {
-                    localStorage.removeItem("loggedInUser");
+                    sessionStorage.removeItem("loggedInUser");
                     loggedInUser.set();
                     location.href = "/";
                 }
