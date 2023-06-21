@@ -43,7 +43,7 @@
 </script>
 <h1>Login</h1>
 <section>
-    <form id="login-form" method="post">
+    <form id="login-form" method="post" on:submit|preventDefault={validateFormAndTryLogin}>
         {#if loginError !== undefined}
         <p id="error-message" bind:innerHTML={loginError} contenteditable="false"></p>
         {/if}
@@ -53,7 +53,7 @@
         <label for="password">Password</label>
         <input name="password" id="password" type="password" bind:value={password} required />
 
-        <input type="submit" value="Submit" on:click|preventDefault={validateFormAndTryLogin} />
+        <input type="submit" value="Submit" />
         <a href="#">Forgot Username?</a>
         <a href="#">Forgot Password?</a>
     </form>
