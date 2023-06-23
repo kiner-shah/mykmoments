@@ -1,13 +1,30 @@
 <script>
     import { goto } from "$app/navigation";
+    import { PUBLIC_API_URL } from "$env/static/public";
+    import { loggedInUser } from "$lib/stores.js";
+    import FixedStatusMessage from "$lib/FixedStatusMessage.svelte";
     // 20 December 2012 at 08:30:00 pm
     // const event = new Date(Date.UTC(2012, 11, 20, 15, 0, 0));
     // console.log(event.toLocaleString('en-GB', { dateStyle: 'long', timeStyle: 'medium', timeZone: 'IST', hour12: 'true' }));
 
-    // TODO: replace with data fetched from backend
-    let moment_count = 2;
+    async function getTotalMoments() {
+        var requestOptions = {
+            method: 'GET',
+            redirect: 'follow',
+            headers: {
+                "Authorization": "Bearer " + $loggedInUser.access_token
+            }
+        };
 
-    let moments_per_page = [10, 20, 50, 100];
+        const response = await fetch("http://localhost:5000/gettotalmoments", requestOptions);
+        if (!response.ok) {
+            throw new Error(response.statusText, {cause: response.status});
+        }
+        const json = await response.json();
+        return json["total_moments"];
+    }
+
+    const moments_per_page = [10, 20, 50, 100];
     let selected_index_for_moments_per_page = 0;
 
     let page_range_start = 0;
@@ -89,7 +106,7 @@
         <p><b>Are you sure you want to delete this moment?</b></p>
         <p>Type <q>I want to delete this moment</q> in the below text box to confirm deletion and then click on Delete button</p>
 
-        <input type="text" on:paste={() => false} bind:value={delete_confirmation_input_text} on:keyup={() => checkDeleteConfirmInputText()} />
+        <input type="text" onpaste="return false" bind:value={delete_confirmation_input_text} on:keyup={() => checkDeleteConfirmInputText()} autocomplete=off />
         <button id="delete-dialog-cancel-button" on:click={() => { to_delete_moment = undefined; }}>Cancel</button>
         <button id="delete-dialog-delete-button" disabled={delete_not_allowed}>Delete</button>
     </form>
@@ -97,7 +114,14 @@
 {/if}
 <section id="moments-header">
     <section id="moments-summary">
-        <h3>Total moments: {moment_count}</h3>
+    {#await getTotalMoments()}
+        <h3>Total moments: Retrieving...</h3>
+    {:then total_moments}
+        <h3>Total moments: {total_moments}</h3>
+    {:catch error}
+        <h3>Total moments: error occured</h3>
+        <FixedStatusMessage is_error={true} message={"cause" in error ? error.message : "Failed to retrieve info"} />
+    {/await}
         <button id="add-new-moment" on:click={() => goto("/addmoment")}>Add New Moment</button>
     </section>
     <section id="moments-search-bar-and-sort">

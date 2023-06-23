@@ -2,9 +2,12 @@
     import { loggedInUser } from "$lib/stores.js";
     import { goto } from "$app/navigation";
     import { PUBLIC_API_URL } from "$env/static/public";
+    import FixedStatusMessage from "$lib/FixedStatusMessage.svelte";
 
     const max_description_length = 2000;
     const feelings = ["happy", "sad", "angry", "scared"];
+    
+    let add_moment_error;
 
     function handleSubmit() {
         const form = document.getElementById("addmoment-form");
@@ -21,7 +24,6 @@
 
         const fetchOptions = {
             method: form.method,
-            mode: "no-cors",    // TODO: replace this later with 'cors' when issue in Crow is fixed (https://github.com/CrowCpp/Crow/issues/538)
             headers: {
                 "Authorization": "Bearer " + $loggedInUser.access_token,
                 "Connection": "Keep-Alive"
@@ -30,12 +32,32 @@
         };
 
         fetch(url.toString(), fetchOptions)
-            .then(response => console.log(response))
-            .catch(error => console.log(error));
+            .then(response => {
+                if (response.ok) {
+                    // return response.text();
+                    console.log(response);
+                }
+                throw new Error(response.statusText, {
+                    cause: response.status
+                });
+            })
+            .catch(error => {
+                if ("cause" in error) {
+                    add_moment_error = error.message;
+                }
+                else {
+                    add_moment_error = "Failed to add moment - either server is down or some other error occured";
+                }
+                // The message will disappear after 10 seconds.
+                setTimeout(() => add_moment_error = undefined, 10000);
+            });
     }
 
 </script>
 
+{#if add_moment_error !== undefined}
+<FixedStatusMessage is_error={true} message={add_moment_error} />
+{/if}
 <form id="addmoment-form" method="post" on:submit|preventDefault={handleSubmit}>
     <label for="moment-title">Title</label>
     <input type="text" id="moment-title" name="moment-title" required />

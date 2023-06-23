@@ -5,9 +5,27 @@
 #include <pqxx/pqxx>
 #include <jwt-cpp/jwt.h>
 
+struct RequestLogger
+{
+    struct context
+    {};
+
+    // This method is run before handling the request
+    void before_handle(crow::request& req, crow::response& /*res*/, context& /*ctx*/)
+    {
+        CROW_LOG_INFO << "Before request handle: " + req.url;
+    }
+
+    // This method is run after handling the request
+    void after_handle(crow::request& req, crow::response& /*res*/, context& /*ctx*/)
+    {
+        CROW_LOG_INFO << "After request handle: " << req.url;
+    }
+};
+
 int main()
 {
-    crow::App<crow::CORSHandler> app; //define your crow application
+    crow::App<RequestLogger, crow::CORSHandler> app; //define your crow application
 
     // Customize CORS
     auto &cors = app.get_middleware<crow::CORSHandler>();
@@ -26,13 +44,33 @@ int main()
     // pqxx::connection c("dbname=mydb user=user1 password=test123");
     // std::cout << "Connected to server with version " << c.server_version() << '\n';
 
+    CROW_ROUTE(app, "/gettotalmoments")
+        .methods(crow::HTTPMethod::OPTIONS)
+    ([](const crow::request& req) {
+        return crow::response(crow::status::OK);
+    });
+
+    CROW_ROUTE(app, "/gettotalmoments")
+        .methods(crow::HTTPMethod::GET)
+    ([](const crow::request& req) {
+        CROW_LOG_INFO << "Sending 20 response";
+        crow::json::wvalue resp_json{ {"total_moments", 20} };
+        return crow::response(crow::status::OK, resp_json);
+    });
+
+    CROW_ROUTE(app, "/addmoment")
+        .methods(crow::HTTPMethod::OPTIONS)
+    ([](const crow::request& req) {
+        return crow::response(crow::status::OK);
+    });
+
     CROW_ROUTE(app, "/addmoment")
         .methods(crow::HTTPMethod::POST)
     ([](const crow::request& req) {
         crow::multipart::message multi_part_message(req);
 
         // Check if required fields are there
-        std::array<const char*, 5> required_parts{"moment-title", "moment-description", "moment-date", "moment-image", "moment-image-caption"};
+        std::array<const char*, 3> required_parts{"moment-title", "moment-description", "moment-date"};
         for (size_t i = 0; i < required_parts.size(); i++)
         {
             auto it = multi_part_message.part_map.find(required_parts[i]);
@@ -50,7 +88,11 @@ int main()
             }
         }
         // Check if any optional fields are present
-        auto it = multi_part_message.part_map.find("moment-feelings");
+        auto it = multi_part_message.part_map.find("moment-image");
+        // Search for image field, if not found return error
+        // If image is found, caption should be there else error
+        it = multi_part_message.part_map.find("moment-image-caption");
+        it = multi_part_message.part_map.find("moment-feelings");
 
 
         return crow::response(crow::status::OK, "OK");
