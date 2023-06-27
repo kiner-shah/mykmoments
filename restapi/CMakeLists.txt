@@ -40,7 +40,7 @@ ExternalProject_Get_property(jwt-cpp INSTALL_DIR)
 
 # TODO: add sources
 
-add_executable(MyKMomentsRestAPI src/main.cpp)
+add_executable(MyKMomentsRestAPI src/Error.cpp src/db_utils.cpp src/main.cpp)
 add_dependencies(MyKMomentsRestAPI jwt-cpp)
 
 # for jwt-cpp headers

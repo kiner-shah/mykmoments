@@ -1,5 +1,8 @@
+#include "db_utils.h"
+
 #include <iostream>
 #include <string>
+#include <tuple>
 #include "crow.h"
 #include "crow/middlewares/cors.h"
 #include <pqxx/pqxx>
@@ -13,13 +16,13 @@ struct RequestLogger
     // This method is run before handling the request
     void before_handle(crow::request& req, crow::response& /*res*/, context& /*ctx*/)
     {
-        CROW_LOG_INFO << "Before request handle: " + req.url;
+        CROW_LOG_DEBUG << "Before request handle: " + req.url;
     }
 
     // This method is run after handling the request
     void after_handle(crow::request& req, crow::response& /*res*/, context& /*ctx*/)
     {
-        CROW_LOG_INFO << "After request handle: " << req.url;
+        CROW_LOG_DEBUG << "After request handle: " << req.url;
     }
 };
 
@@ -119,23 +122,39 @@ int main()
         {
             return crow::response(crow::status::BAD_REQUEST, "Invalid request body - should be a valid JSON string");
         }
+
         // Check whether request body has username and password, if not return 400
         if (!request_body_json.has("username") || !request_body_json.has("password") 
             || request_body_json["username"].s().size() == 0 || request_body_json["password"].s().size() == 0)
         {
             return crow::response(crow::status::BAD_REQUEST, "Invalid request body - missing username and/or password");
         }
+        const std::string username = request_body_json["username"].s();
+        const std::string password = request_body_json["password"].s();
+
         // Check whether database has username, if not return 401, else retrive salt value
-        // Compute hash of (password + salt)
+        auto result = mkm::get_user_details(username);
+        if (std::holds_alternative<mkm::ErrorCode>(result))
+        {
+            return crow::response(crow::status::UNAUTHORIZED, mkm::error_str(std::get<mkm::ErrorCode>(result)));
+        }
+        const auto& user = std::get<mkm::User>(result);
+
+        // Compute hash of input password
         // Check if hash value matches with that in database, if not return 401
+        if (!mkm::is_password_valid(password, user.password_hash))
+        {
+            return crow::response(crow::status::UNAUTHORIZED, mkm::error_str(mkm::ErrorCode::AUTHENTICATION_ERROR));
+        }
+
         // Update login status, create a signed JWT token, return it in the response
         auto current_time = std::chrono::system_clock::now();
         auto token = jwt::create()
-                    .set_issuer("MKM000100")
+                    .set_issuer("MKM")
                     .set_type("JWS")
                     .set_issued_at(current_time)
                     .set_expires_at(current_time + std::chrono::seconds{60})    // TODO: change it later to appropriate expiry
-                    .set_payload_claim("username", jwt::claim(std::string("Kiner Shah")))
+                    .set_payload_claim("username", jwt::claim(user.username))
                     .sign(jwt::algorithm::hs512{"secret"});
         
         crow::json::wvalue resp{ {"access_token", token}, {"username", "Kiner Shah"} };
