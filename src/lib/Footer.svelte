@@ -1,5 +1,5 @@
 <footer>
-    <p>Copyright © 2023 KApps Company. All rights reserved.</p>
+    <p>Copyright © 2023 Kiner Shah. All rights reserved.</p>
 
     <section>
         <a href="/">Home</a>

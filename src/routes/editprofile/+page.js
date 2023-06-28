@@ -9,6 +9,4 @@ export function load() {
         throw redirect(303, "/login");
     }
     loggedInUser.set(JSON.parse(user));
-
-    // TODO: fetch profile information from backend
 }

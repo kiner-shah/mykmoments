@@ -13,7 +13,12 @@
 
 <form>
     <label for="moment-title">Title</label>
-    <input type="text" id="moment-title" name="moment-title" value={data.moment.title}>
+    <input type="text" id="moment-title" name="moment-title" value={data.moment.title} />
+
+    <section id="moment-date-section">
+        <label for="moment-date">Date</label>
+        <input type="date" id="moment-date" name="moment-date" value={getDateString(data.moment.created_date_time)} />
+    </section>
 
     <label for="moment-description">Description</label>
     <textarea name="moment-description" id="moment-description" maxlength="2000" placeholder="Your message (max. 2000 characters)" value={data.moment.description}></textarea>
@@ -22,7 +27,7 @@
     <label for="moment-feelings">How do you feel?</label>
     <section id="moment-feelings">
         {#each feelings as feeling}
-            <input type="checkbox" id={feeling} value={feeling}>
+            <input type="checkbox" id={feeling} value={feeling} />
             <label for={feeling}>{feeling[0].toUpperCase() + feeling.slice(1)}</label>
         {/each}
     </section>
@@ -30,16 +35,11 @@
     <p>Current image associated with this moment: {data.moment.image_url}</p>
     <section id="moment-image-section">
         <label for="moment-image">Change image</label>
-        <input name="moment-image" id="moment-image" type="file" accept=".png,.jpg">
-    </section>
-
-    <section id="moment-date-section">
-        <label for="moment-date">Date</label>
-        <input type="date" id="moment-date" name="moment-date" value={getDateString(data.moment.created_date_time)}>
+        <input name="moment-image" id="moment-image" type="file" accept=".png,.jpg" />
     </section>
 
     <label for="moment-image-caption">Image Caption</label>
-    <input type="text" id="moment-image-caption" name="moment-image-caption" value={data.moment.image_caption}>
+    <input type="text" id="moment-image-caption" name="moment-image-caption" value={data.moment.image_caption} />
 
     <section id="form-buttons">
         <button>Save</button>

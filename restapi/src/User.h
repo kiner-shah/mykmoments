@@ -8,8 +8,11 @@ struct User
 {
     std::string username;
     std::string password_hash;
-    std::string user_full_name;
-    // TODO: add birthdate, age, last login
+    std::string full_name;
+    std::string birth_date;
+    std::string email_id;
+    std::string account_creation_date;
+    // TODO: last login
 };
 
 }   // namespace mkm

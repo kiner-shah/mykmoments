@@ -7,6 +7,7 @@
     const max_description_length = 2000;
     const feelings = ["happy", "sad", "angry", "scared"];
     
+    let selected_image;
     let add_moment_error;
 
     function handleSubmit() {
@@ -62,6 +63,11 @@
     <label for="moment-title">Title</label>
     <input type="text" id="moment-title" name="moment-title" required />
 
+    <section id="moment-date-section">
+        <label for="moment-date">Date</label>
+        <input type="date" id="moment-date" name="moment-date" required />
+    </section>
+
     <label for="moment-description">Description</label>
     <textarea name="moment-description" id="moment-description" maxlength="2000" placeholder="Your message (max. 2000 characters)" required></textarea>
     <p id="moment-description-chars-left">Characters left: 0/{max_description_length}</p>
@@ -74,19 +80,14 @@
         {/each}
     </section>
 
-    <section id="moment-date-section">
-        <label for="moment-date">Date</label>
-        <input type="date" id="moment-date" name="moment-date" required />
-    </section>
-
     <section id="moment-image-section">
         <label for="moment-image">Image</label>
-        <input name="moment-image" id="moment-image" type="file" accept=".png,.jpg" required />
+        <input name="moment-image" id="moment-image" type="file" accept=".png,.jpg" bind:value={selected_image} />
     </section>
 
     <!-- Show only if image is added -->
-    <label for="moment-image-caption">Image Caption</label>
-    <input type="text" id="moment-image-caption" name="moment-image-caption" required />
+    <label for="moment-image-caption" class:hide-element={selected_image === undefined}>Image Caption</label>
+    <input type="text" id="moment-image-caption" name="moment-image-caption" class:hide-element={selected_image === undefined} />
 
     <section id="form-buttons">
         <input type="submit" value="Add Moment" />
@@ -138,5 +139,8 @@
         flex-direction: row;
         column-gap: 10px;
         margin-top: 2%;
+    }
+    .hide-element {
+        display: none;
     }
 </style>
