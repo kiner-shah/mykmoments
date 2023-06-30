@@ -27,7 +27,15 @@ struct RequestLogger
         CROW_LOG_DEBUG << "After request handle: " << req.url;
     }
 };
-
+/**
+ * @brief Verify the authorization header containing the bearer token and
+ * extract username from the token payload.
+ *
+ * @param[in] req The request object
+ * @param[out] username The string to which extracted username will be written to
+ * @retval true Successful verification and @p username will be set.
+ * @retval false Verification failed and @p username will be empty.
+ */
 static bool verify_authorization_header(const crow::request &req, std::string &username)
 {
     const auto &headers_it = req.headers.find("Authorization");
@@ -39,13 +47,14 @@ static bool verify_authorization_header(const crow::request &req, std::string &u
     const std::string &authorization_value = headers_it->second;
     // Authorization header value (Bearer token) should be of format as per
     // [RFC 6750](https://datatracker.ietf.org/doc/html/rfc6750#section-2.1)
-    std::regex bearer_scheme_regex("Bearer\\s+([A-Za-z0-9_\\-.~+]+[=]*)");
+    std::regex bearer_scheme_regex("Bearer +([A-Za-z0-9_\\-.~+]+[=]*)");
     std::smatch m;
     if (!std::regex_match(authorization_value, m, bearer_scheme_regex))
     {
         CROW_LOG_ERROR << "Authorization header's value has invalid format";
         return false;
     }
+
     auto decoded_token = jwt::decode(m[1].str());
     // Decode base64 encoded JWT, verify signature, check expiry
     auto verifier = jwt::verify()
@@ -65,6 +74,61 @@ static bool verify_authorization_header(const crow::request &req, std::string &u
     username = decoded_token.get_payload_claim("username").as_string();
     return true;
 }
+/**
+ * @brief Get the value (string) of a part from a multi-part request if present
+ *
+ * @param[in] multi_part_message The multi-part request object
+ * @param[in] part_name The name of the part whose value needs to be retrieved
+ * @param[out] part_value The string to which the value will be stored
+ * @retval true If part is present, it's value is non-empty. @p part_value will be set
+ * @retval false If part is not present or present but empty. @p part_value will not be set
+ */
+static bool get_part_value_string_if_present(const crow::multipart::message& multi_part_message, const char* part_name, std::string& part_value)
+{
+    auto it = multi_part_message.part_map.find(part_name);
+    if (it == multi_part_message.part_map.end() || it->second.body.empty())
+    {
+        return false;
+    }
+    part_value = it->second.body;
+    return true;
+};
+
+/**
+ * @brief Get the value (file name + file contents) of a part from a multi-part request if present
+ *
+ * @param[in] multi_part_message The multi-part request object
+ * @param[in] part_name The name of the part whose value needs to be retrieved
+ * @param[out] file_name The file name of the uploaded file
+ * @param[out] file_contents The contents of the uploaded file
+ * @retval true If part is present, it's value is non-empty. @p file_name will be set
+ * @retval false If part is not present or present but empty. @p file_name will not be set
+ */
+static bool create_file_from_part_value_if_present(const crow::multipart::message& multi_part_message, const char* part_name, std::string& file_name, std::string& file_contents)
+{
+    auto it = multi_part_message.part_map.find(part_name);
+    if (it == multi_part_message.part_map.end() || it->second.body.empty())
+    {
+        return false;
+    }
+    // Extract the file name
+    auto headers_it = it->second.headers.find("Content-Disposition");
+    if (headers_it == it->second.headers.end())
+    {
+        CROW_LOG_ERROR << "No Content-Disposition found";
+        return false;
+    }
+    auto params_it = headers_it->second.params.find("filename");
+    if (params_it == headers_it->second.params.end())
+    {
+        CROW_LOG_ERROR << "Part with name '" << part_name << "' should have a file";
+        return false;
+    }
+
+    file_name = params_it->second;
+    file_contents = it->second.body;
+    return true;
+};
 
 int main()
 {
@@ -94,9 +158,15 @@ int main()
     CROW_ROUTE(app, "/gettotalmoments")
         .methods(crow::HTTPMethod::GET)([](const crow::request &req)
                                         {
-        CROW_LOG_INFO << "Sending 20 response";
-        crow::json::wvalue resp_json{ {"total_moments", 20} };
-        return crow::response(crow::status::OK, resp_json); });
+        std::string username;
+        if (!verify_authorization_header(req, username))
+        {
+            return crow::response(crow::status::UNAUTHORIZED, mkm::error_str(mkm::ErrorCode::AUTHENTICATION_ERROR));
+        }
+
+        crow::json::wvalue resp_json{ {"total_moments", mkm::get_moment_count(username)} };
+        return crow::response(crow::status::OK, resp_json);
+    });
 
     CROW_ROUTE(app, "/addmoment")
         .methods(crow::HTTPMethod::OPTIONS)([](const crow::request &req)
@@ -105,8 +175,8 @@ int main()
     CROW_ROUTE(app, "/addmoment")
         .methods(crow::HTTPMethod::POST)([](const crow::request &req)
                                          {
-        std::string username;
-        if (!verify_authorization_header(req, username))
+        mkm::Moment moment;
+        if (!verify_authorization_header(req, moment.username))
         {
             return crow::response(crow::status::UNAUTHORIZED, mkm::error_str(mkm::ErrorCode::AUTHENTICATION_ERROR));
         }
@@ -114,32 +184,43 @@ int main()
         crow::multipart::message multi_part_message(req);
 
         // Check if required fields are there
-        std::array<const char*, 3> required_parts{"moment-title", "moment-description", "moment-date"};
-        for (size_t i = 0; i < required_parts.size(); i++)
+        if (!get_part_value_string_if_present(multi_part_message, "moment-title", moment.title))
         {
-            auto it = multi_part_message.part_map.find(required_parts[i]);
-            if (it == multi_part_message.part_map.end())
+            return crow::response(crow::status::BAD_REQUEST, "Required part 'moment-title' is missing or empty");
+        }
+        if (!get_part_value_string_if_present(multi_part_message, "moment-description", moment.description))
+        {
+            return crow::response(crow::status::BAD_REQUEST, "Required part 'moment-description' is missing or empty");
+        }
+        if (!get_part_value_string_if_present(multi_part_message, "moment-date", moment.date))
+        {
+            return crow::response(crow::status::BAD_REQUEST, "Required part 'moment-date' is missing or empty");
+        }
+
+        // Check if any optional fields are present
+        if (create_file_from_part_value_if_present(multi_part_message, "moment-image", moment.image_filename, moment.image_content))
+        {
+            if (!get_part_value_string_if_present(multi_part_message, "moment-image-caption", moment.image_caption))
             {
-                std::stringstream message;
-                message << required_parts[i] << " is missing";
-                return crow::response(crow::status::BAD_REQUEST, message.str());
-            }
-            if (it->second.body.empty())
-            {
-                std::stringstream message;
-                message << required_parts[i] << " cannot be empty";
-                return crow::response(crow::status::BAD_REQUEST, message.str());
+                return crow::response(crow::status::BAD_REQUEST, "Required part 'moment-image-caption' is missing or empty");
             }
         }
-        // Check if any optional fields are present
-        auto it = multi_part_message.part_map.find("moment-image");
-        // Search for image field, if not found return error
-        // If image is found, caption should be there else error
-        it = multi_part_message.part_map.find("moment-image-caption");
-        it = multi_part_message.part_map.find("moment-feelings");
-
-
-        return crow::response(crow::status::OK, "OK"); });
+        std::string moment_feelings_str;
+        if (get_part_value_string_if_present(multi_part_message, "moment-feelings", moment_feelings_str))
+        {
+            std::stringstream s(moment_feelings_str);
+            std::string feeling;
+            while (std::getline(s, feeling, ','))
+            {
+                moment.feelings.emplace_back(std::move(feeling));
+            }
+        }
+        if (!mkm::add_new_moment(moment))
+        {
+            return crow::response(crow::status::INTERNAL_SERVER_ERROR, mkm::error_str(mkm::ErrorCode::INTERNAL_ERROR));
+        }
+        return crow::response(crow::status::OK);
+    });
 
     CROW_ROUTE(app, "/getuserdetails")
         .methods(crow::HTTPMethod::OPTIONS)([](const crow::request &req)
@@ -174,39 +255,31 @@ int main()
         .methods(crow::HTTPMethod::POST)([](const crow::request &req)
                                             {
         crow::multipart::message multi_part_message(req);
-        auto get_part_if_present = [&multi_part_message](const char* part_name, std::string& part_value) -> bool
-        {
-            auto it = multi_part_message.part_map.find(part_name);
-            if (it == multi_part_message.part_map.end() || it->second.body.empty())
-            {
-                return false;
-            }
-            part_value = it->second.body;
-            return true;
-        };
-        std::string full_name, birth_date, email_id, username, password;
+
+        mkm::User user_details;
+        std::string password;
         // Check if required fields are there
-        if (!get_part_if_present("fullname", full_name))
+        if (!get_part_value_string_if_present(multi_part_message, "fullname", user_details.full_name))
         {
             return crow::response(crow::status::BAD_REQUEST, "Required part 'fullname' is missing or empty");
         }
-        if (!get_part_if_present("birthdate", birth_date))
+        if (!get_part_value_string_if_present(multi_part_message, "birthdate", user_details.birth_date))
         {
             return crow::response(crow::status::BAD_REQUEST, "Required part 'birthdate' is missing or empty");
         }
-        if (!get_part_if_present("emailid", email_id))
+        if (!get_part_value_string_if_present(multi_part_message, "emailid", user_details.email_id))
         {
             return crow::response(crow::status::BAD_REQUEST, "Required part 'emailid' is missing or empty");
         }
-        if (!get_part_if_present("username", username))
+        if (!get_part_value_string_if_present(multi_part_message, "username", user_details.username))
         {
             return crow::response(crow::status::BAD_REQUEST, "Required part 'username' is missing or empty");
         }
-        if (!get_part_if_present("password", password))
+        if (!get_part_value_string_if_present(multi_part_message, "password", password))
         {
             return crow::response(crow::status::BAD_REQUEST, "Required part 'password' is missing or empty");
         }
-        if (!mkm::create_new_account(full_name, birth_date, email_id, username, password))
+        if (!mkm::create_new_account(user_details, password))
         {
             return crow::response(crow::status::INTERNAL_SERVER_ERROR, mkm::error_str(mkm::ErrorCode::INTERNAL_ERROR));
         }
@@ -271,16 +344,27 @@ int main()
                     .sign(jwt::algorithm::hs512{"secret"});
         
         crow::json::wvalue resp{ {"access_token", token}, {"username", user.username} };
-        return crow::response(crow::status::OK, resp); });
+        return crow::response(crow::status::OK, resp);
+    });
+
+    CROW_ROUTE(app, "/logout")
+        .methods(crow::HTTPMethod::OPTIONS)([](const crow::request &req)
+                                            { return crow::response(crow::status::OK); });
 
     CROW_ROUTE(app, "/logout")
         .methods(crow::HTTPMethod::POST)([](const crow::request &req)
                                          {
         // Check whether username exists and whether logged in
         // Change status to logged out
+        std::string username;
+        if (!verify_authorization_header(req, username))
+        {
+            return crow::response(crow::status::UNAUTHORIZED, mkm::error_str(mkm::ErrorCode::AUTHENTICATION_ERROR));
+        }
 
-        CROW_LOG_INFO << "Logged out";
-        return crow::response(crow::status::OK, "Logged out"); });
+        CROW_LOG_INFO << "Username " << username << " logged out";
+        return crow::response(crow::status::OK, "Logged out");
+    });
 
     app.loglevel(crow::LogLevel::Debug);
 

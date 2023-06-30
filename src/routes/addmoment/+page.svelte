@@ -8,7 +8,7 @@
     const feelings = ["happy", "sad", "angry", "scared"];
     
     let selected_image;
-    let add_moment_error;
+    let add_moment_response_status = {response_received: false, is_error: false, message: ""};
 
     function handleSubmit() {
         const form = document.getElementById("addmoment-form");
@@ -20,7 +20,7 @@
 
         const form_data = new FormData(form);
         if (feelings_arr.length > 0) {
-            form_data.append("moment_feelings", feelings_arr.join(','));
+            form_data.append("moment-feelings", feelings_arr.join(','));
         }
 
         const fetchOptions = {
@@ -35,29 +35,34 @@
         fetch(url.toString(), fetchOptions)
             .then(response => {
                 if (response.ok) {
-                    // return response.text();
-                    console.log(response);
+                    add_moment_response_status.is_error = false;
+                    add_moment_response_status.message = "Added moment successfully";
+                    add_moment_response_status.response_received = true;
+                    form.reset();
+                    return;
                 }
                 throw new Error(response.statusText, {
                     cause: response.status
                 });
             })
             .catch(error => {
+                add_moment_response_status.is_error = true;
+                add_moment_response_status.response_received = true;
                 if ("cause" in error) {
-                    add_moment_error = error.message;
+                    add_moment_response_status.message = error.message;
                 }
                 else {
-                    add_moment_error = "Failed to add moment - either server is down or some other error occured";
+                    add_moment_response_status.message = "Failed to add moment - either server is down or some other error occured";
                 }
                 // The message will disappear after 10 seconds.
-                setTimeout(() => add_moment_error = undefined, 10000);
+                setTimeout(() => add_moment_response_status = {response_received: false, is_error: false, message: ""}, 10000);
             });
     }
 
 </script>
 
-{#if add_moment_error !== undefined}
-<FixedStatusMessage is_error={true} message={add_moment_error} />
+{#if add_moment_response_status.response_received}
+<FixedStatusMessage is_error={add_moment_response_status.is_error} message={add_moment_response_status.message} />
 {/if}
 <form id="addmoment-form" method="post" on:submit|preventDefault={handleSubmit}>
     <label for="moment-title">Title</label>
@@ -87,7 +92,7 @@
 
     <!-- Show only if image is added -->
     <label for="moment-image-caption" class:hide-element={selected_image === undefined}>Image Caption</label>
-    <input type="text" id="moment-image-caption" name="moment-image-caption" class:hide-element={selected_image === undefined} />
+    <input type="text" id="moment-image-caption" name="moment-image-caption" class:hide-element={selected_image === undefined} required />
 
     <section id="form-buttons">
         <input type="submit" value="Add Moment" />

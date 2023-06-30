@@ -28,7 +28,11 @@
         let url = new URL("/logout", PUBLIC_API_URL);
         const sendRequest = () => {
             fetch(url.toString(), {
-                method: "POST"
+                method: "POST",
+                headers: {
+                    "Authorization": "Bearer " + $loggedInUser.access_token,
+                    "Connection": "Keep-Alive"
+                }
             }).then(response => {
                 if (response.ok) {
                     sessionStorage.removeItem("loggedInUser");
