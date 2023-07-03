@@ -5,6 +5,7 @@
 #include "Moment.h"
 
 #include <variant>
+#include <optional>
 
 namespace mkm
 {
@@ -17,4 +18,6 @@ bool create_new_account(const User& user_details, const std::string& password);
 bool add_new_moment(const Moment& moment);
 
 uint64_t get_moment_count(const std::string& username);
+
+std::variant< std::vector<Moment>, ErrorCode > get_moments_list(const std::string& username, uint32_t page_size, uint64_t current_page, std::optional<std::string> sort_by, std::optional<std::string> search);
 }   // namespace mkm

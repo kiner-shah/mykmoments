@@ -2,6 +2,7 @@
 
 #include <string>
 #include <vector>
+#include <cstddef>
 
 namespace mkm
 {
@@ -13,8 +14,10 @@ struct Moment
     std::string description;
     std::string date;
     std::string image_filename;
-    std::string image_content;
+    std::vector<std::byte> image_content;
     std::string image_caption;
+    std::string created_date;
+    std::string last_modified_date;
     std::vector<std::string> feelings;
 };
 

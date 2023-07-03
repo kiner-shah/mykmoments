@@ -25,33 +25,9 @@
     }
 
     function logout() {
-        let url = new URL("/logout", PUBLIC_API_URL);
-        const sendRequest = () => {
-            fetch(url.toString(), {
-                method: "POST",
-                headers: {
-                    "Authorization": "Bearer " + $loggedInUser.access_token,
-                    "Connection": "Keep-Alive"
-                }
-            }).then(response => {
-                if (response.ok) {
-                    sessionStorage.removeItem("loggedInUser");
-                    loggedInUser.set();
-                    location.href = "/";
-                }
-                throw new Error(response.statusText, {
-                    cause: response.status
-                });
-            }).catch(error => {
-                if ("cause" in error) {
-                    loginError = error.message;
-                }
-                else {
-                    loginError = "Server is down";
-                }
-            });
-        };
-        sendRequest();
+        sessionStorage.removeItem("loggedInUser");
+        loggedInUser.set();
+        location.href = "/";
     }
 </script>
 

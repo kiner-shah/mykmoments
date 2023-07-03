@@ -6,7 +6,7 @@
     import MomentListItem from "$lib/MomentListItem.svelte";
     // 20 December 2012 at 08:30:00 pm
     // const event = new Date(Date.UTC(2012, 11, 20, 15, 0, 0));
-    // console.log(event.toLocaleString('en-GB', { dateStyle: 'long', timeStyle: 'medium', timeZone: 'IST', hour12: 'true' }));
+    // console.log(event.toLocaleString('en-GB', { dateStyle: 'long', timeStyle: 'medium', timeZone: 'IST', hourCycle: 'h12' }));
 
     async function getTotalMoments() {
         var requestOptions = {
@@ -25,6 +25,8 @@
         return json["total_moments"];
     }
 
+    let sort_by = 'date-asc';
+
     const moments_per_page = [10, 20, 50, 100];
     let selected_index_for_moments_per_page = 0;
 
@@ -35,30 +37,58 @@
     let max_pages = 100;
 
     // TODO: replace with data fetched from backend
-    let moments_data = [
-        {
-            id: "moment0",
-            title: "Title 0",
-            description:
-                "This is a very long summary for this moment. I have no idea what to do to get this summary, so I had no choice but to use this dummy",
-            created_by_username: "user1",
-            created_date_time: "9 Jun 2023 3:16:33 pm",
-            last_edit_date_time: "9 Jun 2023 3:16:33 pm",
-            image_url: "https://picsum.photos/200",
-            image_caption: "This is a sample caption for image",
-        },
-        {
-            id: "moment1",
-            title: "Title 1",
-            description:
-                "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nullam sed lorem vehicula, pellentesque dolor quis, convallis felis. Praesent sodales neque eget erat tincidunt, id iaculis est accumsan. Duis non erat congue, fermentum magna vel, interdum mauris. Phasellus at augue magna. Curabitur tempus, ligula maximus fermentum dapibus, velit mi dignissim elit, sit amet cursus nulla nisl vel magna. Sed ut nisi sit amet urna maximus laoreet vitae vitae quam. Ut malesuada est eu dapibus venenatis. Nulla lorem enim, viverra condimentum erat suscipit, blandit mollis eros. Fusce quis vulputate ligula. Praesent neque urna, vestibulum sed libero at, varius tincidunt turpis.",
-            created_by_username: "user1",
-            created_date_time: "9 Jun 2023 3:20:33 pm",
-            last_edit_date_time: "9 Jun 2023 3:20:33 pm",
-            image_url: "https://picsum.photos/200/300",
-            image_caption: "This is a sample caption for image",
-        },
-    ];
+    async function getMomentList(search = undefined) {
+        var requestOptions = {
+            method: 'GET',
+            redirect: 'follow',
+            headers: {
+                "Authorization": "Bearer " + $loggedInUser.access_token
+            }
+        };
+
+        const url = new URL("/getmomentlist", PUBLIC_API_URL);
+        const url_search_params = new URLSearchParams({
+            'page_size': moments_per_page[selected_index_for_moments_per_page],
+            'current_page': current_page,
+            'sort_by': sort_by
+        });
+        if (search !== undefined) {
+            url_search_params.append("search", search);
+        }
+        url.search = url_search_params.toString();
+
+        const response = await fetch(url.toString(), requestOptions);
+        if (!response.ok) {
+            throw new Error(response.statusText, {cause: response.status});
+        }
+        const json = await response.json();
+        return json["moments"];
+    }
+
+    // let moments_data = [
+    //     {
+    //         id: "moment0",
+    //         title: "Title 0",
+    //         description:
+    //             "This is a very long summary for this moment. I have no idea what to do to get this summary, so I had no choice but to use this dummy",
+    //         created_by_username: "user1",
+    //         created_date_time: "9 Jun 2023 3:16:33 pm",
+    //         last_edit_date_time: "9 Jun 2023 3:16:33 pm",
+    //         image_url: "https://picsum.photos/200",
+    //         image_caption: "This is a sample caption for image",
+    //     },
+    //     {
+    //         id: "moment1",
+    //         title: "Title 1",
+    //         description:
+    //             "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nullam sed lorem vehicula, pellentesque dolor quis, convallis felis. Praesent sodales neque eget erat tincidunt, id iaculis est accumsan. Duis non erat congue, fermentum magna vel, interdum mauris. Phasellus at augue magna. Curabitur tempus, ligula maximus fermentum dapibus, velit mi dignissim elit, sit amet cursus nulla nisl vel magna. Sed ut nisi sit amet urna maximus laoreet vitae vitae quam. Ut malesuada est eu dapibus venenatis. Nulla lorem enim, viverra condimentum erat suscipit, blandit mollis eros. Fusce quis vulputate ligula. Praesent neque urna, vestibulum sed libero at, varius tincidunt turpis.",
+    //         created_by_username: "user1",
+    //         created_date_time: "9 Jun 2023 3:20:33 pm",
+    //         last_edit_date_time: "9 Jun 2023 3:20:33 pm",
+    //         image_url: "https://picsum.photos/200/300",
+    //         image_caption: "This is a sample caption for image",
+    //     },
+    // ];
 
     function changeToPage(page_number) {
         if (page_number <= 0 || page_number > max_pages) {
@@ -100,7 +130,7 @@
         <button>Search</button>
         <section id="moments-sort-by">
             <label for="sort-by">Sort by</label>
-            <select id="sort-by" name="sort-by">
+            <select id="sort-by" name="sort-by" bind:value={sort_by}>
                 <option value="date-asc">Date posted (ascending)</option>
                 <option value="date-desc">Date posted (descending)</option>
             </select>
@@ -109,9 +139,19 @@
 </section>
 
 <section id="moments-list">
-    {#each moments_data as moment}
-        <MomentListItem moment={moment} />
-    {/each}
+    {#await getMomentList()}
+        Retrieving data...
+    {:then moments_data}
+        {#if moments_data.length == 0}
+            No data found
+        {:else}
+            {#each moments_data as moment}
+                <MomentListItem moment={moment} />
+            {/each}
+        {/if}
+    {:catch error}
+        <FixedStatusMessage is_error={true} message={"cause" in error ? error.message : "Failed to retrieve info"} />
+    {/await}
 </section>
 
 <section id="moments-footer">

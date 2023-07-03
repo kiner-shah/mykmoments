@@ -1,7 +1,7 @@
 <script>
     import { goto } from "$app/navigation";
     import { PUBLIC_API_URL } from "$env/static/public";
-
+    
     export let moment;
 
     let to_delete_moment;
@@ -17,6 +17,33 @@
         if (delete_confirmation_input_text === delete_confirmation_text) {
             delete_not_allowed = false;
         }
+    }
+
+    function convertToHumanReadableDateTimeString(input_date_time) {
+        const event = new Date(input_date_time);
+        return event.toLocaleString('en-GB', { dateStyle: 'long', timeStyle: 'medium', timeZone: 'IST', hourCycle: 'h12' });
+    }
+
+    function getImageData(image_data, image_filename) {
+        if (image_data === undefined || image_data.length == 0) {
+            return "";
+        }
+        const file_extension = image_filename.split('.').pop();
+
+        // Thanks to mobz (https://stackoverflow.com/a/9458996)
+        // let binary = '';
+        // let bytes = new Uint8Array( image_data );
+        // var len = bytes.byteLength;
+        // for (var i = 0; i < len; i++) {
+        //     binary += String.fromCharCode( bytes[ i ] );
+        // }
+
+        let binary = "";
+        for(let i = 0; i < image_data.length; i++) {
+            binary += !(i - 1 & 1) ? String.fromCharCode(parseInt(image_data.substring(i - 1, i + 1), 16)) : ""
+        }
+        const base64_encoded = btoa( binary );
+        return "data:image/" + file_extension + ";base64," + base64_encoded;
     }
 </script>
 
@@ -40,8 +67,8 @@
     <section class="moments-list-item-image-section">
         <img
             class="moments-list-item-image"
-            src={moment.image_url}
-            alt={moment.image_caption}
+            src={getImageData(moment.image_data, moment.image_filename)}
+            alt="moment image"
         />
     </section>
     <section class="moments-list-item-summary">
@@ -49,8 +76,8 @@
         <span>{moment.short_description}</span>
         <section class="moments-list-item-more-info">
             <section class="moments-list-item-meta">
-                <span>Created {moment.created_date_time}</span> &#8226
-                <span>Last modified {moment.last_edit_date_time}</span>
+                <span>Created {convertToHumanReadableDateTimeString(moment.created_time)}</span> &#8226
+                <span>Last modified {convertToHumanReadableDateTimeString(moment.last_modified_time)}</span>
             </section>
             <section class="moments-options">
                 <button class="moments-option-item" on:click={() => goto("/show/" + moment.id)}>&#128065</button>

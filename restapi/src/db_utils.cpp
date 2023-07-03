@@ -9,7 +9,7 @@ namespace mkm
     std::variant<User, ErrorCode> get_user_details(const std::string &username)
     {
         // TODO: replace hardcoded string with values from some environment/properties file
-        pqxx::connection c("dbname=mkm_db user=mkm_user password=<PASSWORD>");
+        pqxx::connection c("dbname=mkm_db user=mkm_user password=U5er@Mkm");
 
         pqxx::read_transaction transaction(c);
 
@@ -36,7 +36,7 @@ namespace mkm
     bool is_password_valid(const std::string &input_password, const std::string &stored_password_hash)
     {
         // TODO: replace hardcoded string with values from some environment/properties file
-        pqxx::connection c("dbname=mkm_db user=mkm_user password=<PASSWORD>");
+        pqxx::connection c("dbname=mkm_db user=mkm_user password=U5er@Mkm");
 
         pqxx::read_transaction transaction(c);
 
@@ -75,7 +75,7 @@ namespace mkm
     bool create_new_account(const User& user_details, const std::string& password)
     {
         // TODO: replace hardcoded string with values from some environment/properties file
-        pqxx::connection c("dbname=mkm_db user=mkm_user password=<PASSWORD>");
+        pqxx::connection c("dbname=mkm_db user=mkm_user password=U5er@Mkm");
 
         pqxx::work transaction(c);
 
@@ -110,7 +110,7 @@ namespace mkm
     bool add_new_moment(const Moment& moment)
     {
         // TODO: replace hardcoded string with values from some environment/properties file
-        pqxx::connection c("dbname=mkm_db user=mkm_user password=<PASSWORD>");
+        pqxx::connection c("dbname=mkm_db user=mkm_user password=U5er@Mkm");
 
         pqxx::work transaction(c);
 
@@ -118,7 +118,7 @@ namespace mkm
         {
             std::string image_content_bytes{ transaction.quote_raw(
                 std::basic_string_view<std::byte>{
-                    reinterpret_cast<std::byte const*>(std::data(moment.image_content)),
+                    std::data(moment.image_content),
                     std::size(moment.image_content)
                 }
             )};
@@ -165,7 +165,7 @@ namespace mkm
     uint64_t get_moment_count(const std::string& username)
     {
         // TODO: replace hardcoded string with values from some environment/properties file
-        pqxx::connection c("dbname=mkm_db user=mkm_user password=<PASSWORD>");
+        pqxx::connection c("dbname=mkm_db user=mkm_user password=U5er@Mkm");
 
         pqxx::read_transaction transaction(c);
 
@@ -180,5 +180,67 @@ namespace mkm
             CROW_LOG_ERROR << "Number of rows returned is not equal to 1: " << e.what();
             return 0;
         }
+    }
+
+    std::variant< std::vector<Moment>, ErrorCode > get_moments_list(const std::string& username, uint32_t page_size, uint64_t current_page, std::optional<std::string> sort_by, std::optional<std::string> search)
+    {
+        // TODO: replace hardcoded string with values from some environment/properties file
+        pqxx::connection c("dbname=mkm_db user=mkm_user password=U5er@Mkm");
+
+        pqxx::read_transaction transaction(c);
+        try
+        {
+            std::stringstream s;
+            s << "SELECT * FROM moments WHERE username=" << transaction.quote(username);
+            if (search.has_value())
+            {
+                s << " AND title like '%" << transaction.esc(search.value()) << "%'";
+            }
+            std::string sort_by_val = "asc";
+            if (sort_by.has_value() && sort_by.value() == "date-desc")
+            {
+                sort_by_val = "desc";
+            }
+            s << " ORDER BY created_date " << sort_by_val;
+            s << " OFFSET " << (current_page - 1) * page_size;
+            s << " LIMIT " << page_size;
+
+            std::string query = s.str();
+            CROW_LOG_DEBUG << "Query: " << query;
+
+            auto result = transaction.exec(query);
+            transaction.commit();
+
+            std::vector<Moment> moments;
+            for (size_t i = 0; i < result.size(); i++)
+            {
+                auto row = result[i];
+
+                Moment moment{
+                    .id = row["id"].as<uint64_t>(),
+                    .username = row["username"].c_str(),
+                    .title = row["title"].c_str(),
+                    .description = row["description"].c_str(),
+                    .created_date = row["created_date"].c_str(),
+                    .last_modified_date = row["last_modified_date"].c_str()
+                };
+
+                if (!row["image_data"].is_null())
+                {
+                    std::basic_string<std::byte> byte_image_content = transaction.unesc_bin(row["image_data"].c_str());
+                    moment.image_content = std::vector<std::byte>(byte_image_content.begin(), byte_image_content.end());
+                    moment.image_filename = row["image_filename"].c_str();
+                }
+
+                moments.push_back(std::move(moment));
+            }
+            return moments;
+        }
+        catch(const pqxx::sql_error& e)
+        {
+            CROW_LOG_ERROR << "Internal exception was thrown: " << e.what();
+            return ErrorCode::INTERNAL_ERROR;
+        }
+        
     }
 } // namespace mkm

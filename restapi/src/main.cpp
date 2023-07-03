@@ -1,9 +1,11 @@
 #include "db_utils.h"
 
 #include <iostream>
+#include <iomanip>
 #include <string>
 #include <tuple>
 #include <regex>
+#include <optional>
 #include "crow.h"
 #include "crow/middlewares/cors.h"
 #include <pqxx/pqxx>
@@ -104,7 +106,7 @@ static bool get_part_value_string_if_present(const crow::multipart::message& mul
  * @retval true If part is present, it's value is non-empty. @p file_name will be set
  * @retval false If part is not present or present but empty. @p file_name will not be set
  */
-static bool create_file_from_part_value_if_present(const crow::multipart::message& multi_part_message, const char* part_name, std::string& file_name, std::string& file_contents)
+static bool create_file_from_part_value_if_present(const crow::multipart::message& multi_part_message, const char* part_name, std::string& file_name, std::vector<std::byte>& file_contents)
 {
     auto it = multi_part_message.part_map.find(part_name);
     if (it == multi_part_message.part_map.end() || it->second.body.empty())
@@ -126,7 +128,7 @@ static bool create_file_from_part_value_if_present(const crow::multipart::messag
     }
 
     file_name = params_it->second;
-    file_contents = it->second.body;
+    std::transform(it->second.body.begin(), it->second.body.end(), std::back_inserter(file_contents), [](char c) { return std::byte(c); });
     return true;
 };
 
@@ -251,6 +253,59 @@ int main()
         return crow::response(crow::status::OK, resp_json);
     });
 
+    CROW_ROUTE(app, "/getmomentlist")
+        .methods(crow::HTTPMethod::OPTIONS)([](const crow::request &req)
+                                            { return crow::response(crow::status::OK); });
+    
+    CROW_ROUTE(app, "/getmomentlist")
+        .methods(crow::HTTPMethod::GET)([](const crow::request &req)
+                                            {
+        std::string username;
+        if (!verify_authorization_header(req, username))
+        {
+            return crow::response(crow::status::UNAUTHORIZED, mkm::error_str(mkm::ErrorCode::AUTHENTICATION_ERROR));
+        }
+        const crow::query_string& qs = req.url_params;
+        uint32_t page_size = std::stoi(qs.get("page_size"));
+        uint64_t current_page = std::stoi(qs.get("current_page"));
+        std::optional<std::string> search = (qs.get("search") == nullptr ? std::nullopt : std::make_optional(qs.get("search")));
+        std::optional<std::string> sort_by = (qs.get("sort_by") == nullptr ? std::nullopt : std::make_optional(qs.get("sort_by")));
+
+        auto result = mkm::get_moments_list(username, page_size, current_page, std::move(sort_by), std::move(search));
+        if (std::holds_alternative<mkm::ErrorCode>(result))
+        {
+            mkm::ErrorCode ec = std::get<mkm::ErrorCode>(result);
+            return crow::response(crow::status::INTERNAL_SERVER_ERROR, mkm::error_str(ec));
+        }
+        const auto& moments = std::get< std::vector<mkm::Moment> >(result);
+        std::vector<crow::json::wvalue> moments_json_list;
+        for (const auto& moment : moments)
+        {
+            // std::vector<crow::json::wvalue> image_content_bytes;
+            std::stringstream s;
+            for (auto x : moment.image_content)
+            {
+                // image_content_bytes.push_back(std::to_integer<uint8_t>(x));
+                s << std::setw(2) << std::setfill('0') << std::hex << std::to_integer<uint16_t>(x);
+            }
+
+            std::string image_content_hex = s.str();
+            
+            crow::json::wvalue entry{
+                {"id", moment.id},
+                {"username", moment.username},
+                {"title", moment.title},
+                {"short_description", moment.description.substr(0, 200)},
+                {"image_filename", moment.image_filename},
+                {"image_data", image_content_hex},
+                {"created_time", moment.created_date},
+                {"last_modified_time", moment.last_modified_date}
+            };
+            moments_json_list.push_back(entry);
+        }
+        return crow::response(crow::status::OK, crow::json::wvalue({ {"moments", moments_json_list} }));
+    });
+
     CROW_ROUTE(app, "/createaccount")
         .methods(crow::HTTPMethod::POST)([](const crow::request &req)
                                             {
@@ -345,25 +400,6 @@ int main()
         
         crow::json::wvalue resp{ {"access_token", token}, {"username", user.username} };
         return crow::response(crow::status::OK, resp);
-    });
-
-    CROW_ROUTE(app, "/logout")
-        .methods(crow::HTTPMethod::OPTIONS)([](const crow::request &req)
-                                            { return crow::response(crow::status::OK); });
-
-    CROW_ROUTE(app, "/logout")
-        .methods(crow::HTTPMethod::POST)([](const crow::request &req)
-                                         {
-        // Check whether username exists and whether logged in
-        // Change status to logged out
-        std::string username;
-        if (!verify_authorization_header(req, username))
-        {
-            return crow::response(crow::status::UNAUTHORIZED, mkm::error_str(mkm::ErrorCode::AUTHENTICATION_ERROR));
-        }
-
-        CROW_LOG_INFO << "Username " << username << " logged out";
-        return crow::response(crow::status::OK, "Logged out");
     });
 
     app.loglevel(crow::LogLevel::Debug);
