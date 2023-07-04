@@ -295,6 +295,7 @@ int main()
                 {"id", moment.id},
                 {"username", moment.username},
                 {"title", moment.title},
+                {"date", moment.date},
                 {"short_description", moment.description.substr(0, 200)},
                 {"image_filename", moment.image_filename},
                 {"image_data", image_content_hex},
@@ -304,6 +305,52 @@ int main()
             moments_json_list.push_back(entry);
         }
         return crow::response(crow::status::OK, crow::json::wvalue({ {"moments", moments_json_list} }));
+    });
+
+    CROW_ROUTE(app, "/getmoment")
+        .methods(crow::HTTPMethod::OPTIONS)([](const crow::request &req)
+                                            { return crow::response(crow::status::OK); });
+
+    CROW_ROUTE(app, "/getmoment")
+        .methods(crow::HTTPMethod::GET)([](const crow::request &req)
+                                            {
+        std::string username;
+        if (!verify_authorization_header(req, username))
+        {
+            return crow::response(crow::status::UNAUTHORIZED, mkm::error_str(mkm::ErrorCode::AUTHENTICATION_ERROR));
+        }
+        const crow::query_string& qs = req.url_params;
+        uint64_t id = std::stoi(qs.get("id"));
+
+        auto result = mkm::get_moment_details(username, id);
+        if (std::holds_alternative<mkm::ErrorCode>(result))
+        {
+            mkm::ErrorCode ec = std::get<mkm::ErrorCode>(result);
+            return crow::response(crow::status::NOT_FOUND, mkm::error_str(ec));
+        }
+        const mkm::Moment& moment = std::get<mkm::Moment>(result);
+        std::stringstream s;
+        for (auto x : moment.image_content)
+        {
+            s << std::setw(2) << std::setfill('0') << std::hex << std::to_integer<uint16_t>(x);
+        }
+
+        std::string image_content_hex = s.str();
+
+        crow::json::wvalue resp_obj{
+            {"id", moment.id},
+            {"username", moment.username},
+            {"title", moment.title},
+            {"description", moment.description},
+            {"date", moment.date},
+            {"image_filename", moment.image_filename},
+            {"image_caption", moment.image_caption},
+            {"image_data", image_content_hex},
+            {"created_time", moment.created_date},
+            {"last_modified_time", moment.last_modified_date}
+        };
+
+        return crow::response(crow::status::OK, resp_obj);
     });
 
     CROW_ROUTE(app, "/createaccount")

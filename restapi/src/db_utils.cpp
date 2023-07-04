@@ -221,6 +221,7 @@ namespace mkm
                     .username = row["username"].c_str(),
                     .title = row["title"].c_str(),
                     .description = row["description"].c_str(),
+                    .date = row["moment_date"].c_str(),
                     .created_date = row["created_date"].c_str(),
                     .last_modified_date = row["last_modified_date"].c_str()
                 };
@@ -242,5 +243,48 @@ namespace mkm
             return ErrorCode::INTERNAL_ERROR;
         }
         
+    }
+
+    std::variant<Moment, ErrorCode> get_moment_details(const std::string& username, uint64_t id)
+    {
+        // TODO: replace hardcoded string with values from some environment/properties file
+        pqxx::connection c("dbname=mkm_db user=mkm_user password=U5er@Mkm");
+
+        pqxx::read_transaction transaction(c);
+
+        try
+        {
+            std::stringstream s;
+            s << "SELECT * FROM moments WHERE username=" << transaction.quote(username) << " AND id=" << id;
+            std::string query = s.str();
+            CROW_LOG_DEBUG << "Query: " << query;
+
+            auto row = transaction.exec1(query);
+            transaction.commit();
+
+            Moment moment{
+                .id = row["id"].as<uint64_t>(),
+                .username = row["username"].c_str(),
+                .title = row["title"].c_str(),
+                .description = row["description"].c_str(),
+                .date = row["moment_date"].c_str(),
+                .image_caption = row["image_caption"].c_str(),
+                .created_date = row["created_date"].c_str(),
+                .last_modified_date = row["last_modified_date"].c_str()
+            };
+
+            if (!row["image_data"].is_null())
+            {
+                std::basic_string<std::byte> byte_image_content = transaction.unesc_bin(row["image_data"].c_str());
+                moment.image_content = std::vector<std::byte>(byte_image_content.begin(), byte_image_content.end());
+                moment.image_filename = row["image_filename"].c_str();
+            }
+            return moment;
+        }
+        catch (const pqxx::unexpected_rows &e)
+        {
+            CROW_LOG_ERROR << "Number of rows returned is not equal to 1: " << e.what();
+            return ErrorCode::INTERNAL_ERROR;
+        }
     }
 } // namespace mkm

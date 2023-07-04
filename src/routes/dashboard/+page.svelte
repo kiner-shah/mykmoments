@@ -4,9 +4,6 @@
     import { loggedInUser } from "$lib/stores.js";
     import FixedStatusMessage from "$lib/FixedStatusMessage.svelte";
     import MomentListItem from "$lib/MomentListItem.svelte";
-    // 20 December 2012 at 08:30:00 pm
-    // const event = new Date(Date.UTC(2012, 11, 20, 15, 0, 0));
-    // console.log(event.toLocaleString('en-GB', { dateStyle: 'long', timeStyle: 'medium', timeZone: 'IST', hourCycle: 'h12' }));
 
     async function getTotalMoments() {
         var requestOptions = {
@@ -31,12 +28,13 @@
     let selected_index_for_moments_per_page = 0;
 
     let page_range_start = 0;
-    const page_range_length = 10;
+    let page_range_length = 10;
     let current_page = 1;
-    // TODO: replace with data fetched from backend
-    let max_pages = 100;
 
-    // TODO: replace with data fetched from backend
+    let max_pages = 0;
+
+    let get_moments_list_promise = getMomentList();
+
     async function getMomentList(search = undefined) {
         var requestOptions = {
             method: 'GET',
@@ -62,33 +60,10 @@
             throw new Error(response.statusText, {cause: response.status});
         }
         const json = await response.json();
+        max_pages = Math.ceil(json["moments"].length / moments_per_page[selected_index_for_moments_per_page]);
+        page_range_length = Math.min(max_pages, page_range_length);
         return json["moments"];
     }
-
-    // let moments_data = [
-    //     {
-    //         id: "moment0",
-    //         title: "Title 0",
-    //         description:
-    //             "This is a very long summary for this moment. I have no idea what to do to get this summary, so I had no choice but to use this dummy",
-    //         created_by_username: "user1",
-    //         created_date_time: "9 Jun 2023 3:16:33 pm",
-    //         last_edit_date_time: "9 Jun 2023 3:16:33 pm",
-    //         image_url: "https://picsum.photos/200",
-    //         image_caption: "This is a sample caption for image",
-    //     },
-    //     {
-    //         id: "moment1",
-    //         title: "Title 1",
-    //         description:
-    //             "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nullam sed lorem vehicula, pellentesque dolor quis, convallis felis. Praesent sodales neque eget erat tincidunt, id iaculis est accumsan. Duis non erat congue, fermentum magna vel, interdum mauris. Phasellus at augue magna. Curabitur tempus, ligula maximus fermentum dapibus, velit mi dignissim elit, sit amet cursus nulla nisl vel magna. Sed ut nisi sit amet urna maximus laoreet vitae vitae quam. Ut malesuada est eu dapibus venenatis. Nulla lorem enim, viverra condimentum erat suscipit, blandit mollis eros. Fusce quis vulputate ligula. Praesent neque urna, vestibulum sed libero at, varius tincidunt turpis.",
-    //         created_by_username: "user1",
-    //         created_date_time: "9 Jun 2023 3:20:33 pm",
-    //         last_edit_date_time: "9 Jun 2023 3:20:33 pm",
-    //         image_url: "https://picsum.photos/200/300",
-    //         image_caption: "This is a sample caption for image",
-    //     },
-    // ];
 
     function changeToPage(page_number) {
         if (page_number <= 0 || page_number > max_pages) {
@@ -106,6 +81,7 @@
                 " page range start: " +
                 page_range_start
         );
+        get_moments_list_promise = getMomentList();
     }
 </script>
 
@@ -127,10 +103,10 @@
     </section>
     <section id="moments-search-bar-and-sort">
         <input type="search" id="searchbar" placeholder="Search title" />
-        <button>Search</button>
+        <button on:click={() => get_moments_list_promise = getMomentList(document.getElementById('searchbar').value)}>Search</button>
         <section id="moments-sort-by">
             <label for="sort-by">Sort by</label>
-            <select id="sort-by" name="sort-by" bind:value={sort_by}>
+            <select id="sort-by" name="sort-by" bind:value={sort_by} on:change={() => get_moments_list_promise = getMomentList()}>
                 <option value="date-asc">Date posted (ascending)</option>
                 <option value="date-desc">Date posted (descending)</option>
             </select>
@@ -139,7 +115,7 @@
 </section>
 
 <section id="moments-list">
-    {#await getMomentList()}
+    {#await get_moments_list_promise}
         Retrieving data...
     {:then moments_data}
         {#if moments_data.length == 0}
@@ -180,6 +156,7 @@
             <button
                 on:click={() => {
                     selected_index_for_moments_per_page = index;
+                    get_moments_list_promise = getMomentList();
                 }}
                 class:moments-per-page-active={index ===
                     selected_index_for_moments_per_page}

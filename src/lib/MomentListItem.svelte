@@ -1,6 +1,5 @@
 <script>
     import { goto } from "$app/navigation";
-    import { PUBLIC_API_URL } from "$env/static/public";
     
     export let moment;
 
@@ -76,6 +75,7 @@
         <span>{moment.short_description}</span>
         <section class="moments-list-item-more-info">
             <section class="moments-list-item-meta">
+                <span>Date {moment.date}</span> &#8226
                 <span>Created {convertToHumanReadableDateTimeString(moment.created_time)}</span> &#8226
                 <span>Last modified {convertToHumanReadableDateTimeString(moment.last_modified_time)}</span>
             </section>
