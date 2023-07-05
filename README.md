@@ -37,6 +37,9 @@ sudo apt-get install postgresql postgresql-contrib
 # Note about Crow
 You need to apply a [patch](crow_hack.patch) after cloning Crow because there is one [open issue](https://github.com/CrowCpp/Crow/issues/538) because of which Crow doesn't send proper response for preflight OPTIONS requests.
 
+# Database schema
+Database schema is present [here](restapi/mkm_db.sql).
+
 # Building and running REST API
 ```
 cd restapi
@@ -48,5 +51,6 @@ make
 
 # Running front end
 ```
+npm install
 npm run dev
 ```
