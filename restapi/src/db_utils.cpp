@@ -116,12 +116,18 @@ namespace mkm
 
         try
         {
-            std::string image_content_bytes{ transaction.quote_raw(
-                std::basic_string_view<std::byte>{
-                    std::data(moment.image_content),
-                    std::size(moment.image_content)
-                }
-            )};
+            std::basic_string_view<std::byte> image_content_bytes{
+                std::data(moment.image_content),
+                std::size(moment.image_content)
+            };
+            std::string image_content;
+            std::string image_filename;
+            std::string image_caption;
+
+            // In case of no data, set the image_data to NULL
+            image_content = image_content_bytes.empty() ? "NULL" : transaction.quote_raw(image_content_bytes);
+            image_filename = image_content_bytes.empty() ? "NULL" : transaction.quote(moment.image_filename);
+            image_caption = image_content_bytes.empty() ? "NULL" : transaction.quote(moment.image_caption);
 
             // Will use a SQL trigger / function which will get triggered before insert
             // new_id = select count(*) + 1 from moments where username=<username>
@@ -133,23 +139,127 @@ namespace mkm
                 << transaction.quote(moment.title) << ','
                 << transaction.quote(moment.description) << ','
                 << transaction.quote(moment.date) << ','
-                << transaction.quote(moment.image_filename) << ','
-                << image_content_bytes << ','
-                << transaction.quote(moment.image_caption) << ", '{";
-            for (size_t i = 0; i < moment.feelings.size(); i++)
+                << image_filename << ','
+                << image_content << ','
+                << image_caption << ',';
+            if (moment.feelings.empty())
             {
-                s << '"' << transaction.esc(moment.feelings[i]) << '"';
-                if (i != moment.feelings.size() - 1)
-                {
-                    s << ',';
-                }
+                s << "NULL";
             }
-            s << "}')";
+            else
+            {
+                s << "'{";
+                for (size_t i = 0; i < moment.feelings.size(); i++)
+                {
+                    s << '"' << transaction.esc(moment.feelings[i]) << '"';
+                    if (i != moment.feelings.size() - 1)
+                    {
+                        s << ',';
+                    }
+                }
+                s << "}'";
+            }
+            s << ')';
 
             auto result = transaction.exec(s.str());
             if (result.affected_rows() != 1)
             {
                 CROW_LOG_ERROR << "Something went wrong - couldn't insert data into database table";
+                return false;
+            }
+            transaction.commit();
+            return true;
+        }
+        catch(const pqxx::sql_error& e)
+        {
+            CROW_LOG_ERROR << "Internal exception was thrown: " << e.what();
+            return false;
+        }
+    }
+
+    bool update_moment(const Moment& moment)
+    {
+        // TODO: replace hardcoded string with values from some environment/properties file
+        pqxx::connection c("dbname=mkm_db user=mkm_user password=U5er@Mkm");
+
+        pqxx::work transaction(c);
+
+        try
+        {
+            std::basic_string_view<std::byte> image_content_bytes{
+                std::data(moment.image_content),
+                std::size(moment.image_content)
+            };
+
+            std::stringstream s;
+            s << "UPDATE moments SET ";
+            if (!moment.title.empty())
+            {
+                s << "title=" << transaction.quote(moment.title) << ',';
+            }
+            if (!moment.description.empty())
+            {
+                s << "description=" << transaction.quote(moment.description) << ',';
+            }
+            if (!moment.date.empty())
+            {
+                s << "moment_date=" << transaction.quote(moment.date) << ',';
+            }
+            if (!moment.feelings.empty())
+            {
+                s << "feelings='{";
+                for (size_t i = 0; i < moment.feelings.size(); i++)
+                {
+                    s << '"' << transaction.esc(moment.feelings[i]) << '"';
+                    if (i != moment.feelings.size() - 1)
+                    {
+                        s << ',';
+                    }
+                }
+                s << "}',";
+            }
+            if (!image_content_bytes.empty())
+            {
+                s << "image_data=" << transaction.quote_raw(image_content_bytes) << ",image_filename=" << transaction.quote(moment.image_filename) << ',';
+            }
+            if (!moment.image_caption.empty())
+            {
+                s << "image_caption=" << transaction.quote(moment.image_caption) << ',';
+            }
+            s << "last_modified_date=NOW() WHERE username=" << transaction.quote(moment.username) << " AND id=" << moment.id;
+
+            auto result = transaction.exec(s.str());
+            if (result.affected_rows() != 1)
+            {
+                CROW_LOG_ERROR << "Something went wrong - couldn't update data into database table";
+                return false;
+            }
+            transaction.commit();
+            return true;
+        }
+        catch(const pqxx::sql_error& e)
+        {
+            CROW_LOG_ERROR << "Internal exception was thrown: " << e.what();
+            return false;
+        }
+    }
+
+    bool delete_moment(const std::string& username, uint64_t moment_id)
+    {
+        // TODO: replace hardcoded string with values from some environment/properties file
+        pqxx::connection c("dbname=mkm_db user=mkm_user password=U5er@Mkm");
+
+        pqxx::work transaction(c);
+
+        try
+        {
+            std::stringstream s;
+            s << "DELETE FROM moments WHERE username=" << transaction.quote(username) << " AND id=" << moment_id;
+
+            auto result = transaction.exec(s.str());
+            if (result.affected_rows() != 1)
+            {
+                CROW_LOG_ERROR << "Something went wrong - couldn't delete moment from database table";
                 return false;
             }
             transaction.commit();
@@ -278,6 +388,22 @@ namespace mkm
                 std::basic_string<std::byte> byte_image_content = transaction.unesc_bin(row["image_data"].c_str());
                 moment.image_content = std::vector<std::byte>(byte_image_content.begin(), byte_image_content.end());
                 moment.image_filename = row["image_filename"].c_str();
+            }
+            if (!row["feelings"].is_null())
+            {
+                auto array_parser_obj = row["feelings"].as_array();
+                while (true)
+                {
+                    const auto& [juncture_val, array_val] = array_parser_obj.get_next();
+                    if (juncture_val == pqxx::array_parser::juncture::done)
+                    {
+                        break;
+                    }
+                    if (juncture_val == pqxx::array_parser::juncture::string_value)
+                    {
+                        moment.feelings.push_back(array_val);
+                    }
+                }
             }
             return moment;
         }

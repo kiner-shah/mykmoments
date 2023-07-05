@@ -224,6 +224,85 @@ int main()
         return crow::response(crow::status::OK);
     });
 
+    CROW_ROUTE(app, "/updatemoment")
+        .methods(crow::HTTPMethod::OPTIONS)([](const crow::request &req)
+                                            { return crow::response(crow::status::OK); });
+
+    CROW_ROUTE(app, "/updatemoment")
+        .methods(crow::HTTPMethod::POST)([](const crow::request &req)
+                                         {
+        mkm::Moment moment;
+        if (!verify_authorization_header(req, moment.username))
+        {
+            return crow::response(crow::status::UNAUTHORIZED, mkm::error_str(mkm::ErrorCode::AUTHENTICATION_ERROR));
+        }
+        const crow::query_string& qs = req.url_params;
+        const char* id_str = qs.get("id");
+        if (id_str == nullptr)
+        {
+            return crow::response(crow::status::BAD_REQUEST, "id parameter is missing");
+        }
+        moment.id = std::stoull(id_str);
+
+        crow::multipart::message multi_part_message(req);
+
+        // Check if any optional fields are present
+        get_part_value_string_if_present(multi_part_message, "moment-title", moment.title);
+        get_part_value_string_if_present(multi_part_message, "moment-description", moment.description);
+        get_part_value_string_if_present(multi_part_message, "moment-date", moment.date);
+
+        if (create_file_from_part_value_if_present(multi_part_message, "moment-image", moment.image_filename, moment.image_content))
+        {
+            // If image is present, its caption is required
+            if (!get_part_value_string_if_present(multi_part_message, "moment-image-caption", moment.image_caption))
+            {
+                return crow::response(crow::status::BAD_REQUEST, "Required part 'moment-image-caption' is missing or empty");
+            }
+        }
+        std::string moment_feelings_str;
+        if (get_part_value_string_if_present(multi_part_message, "moment-feelings", moment_feelings_str))
+        {
+            std::stringstream s(moment_feelings_str);
+            std::string feeling;
+            while (std::getline(s, feeling, ','))
+            {
+                moment.feelings.emplace_back(std::move(feeling));
+            }
+        }
+        if (!mkm::update_moment(moment))
+        {
+            return crow::response(crow::status::INTERNAL_SERVER_ERROR, mkm::error_str(mkm::ErrorCode::INTERNAL_ERROR));
+        }
+        return crow::response(crow::status::OK);
+    });
+
+    CROW_ROUTE(app, "/deletemoment")
+        .methods(crow::HTTPMethod::OPTIONS)([](const crow::request &req)
+                                            { return crow::response(crow::status::OK); });
+
+    CROW_ROUTE(app, "/deletemoment")
+        .methods(crow::HTTPMethod::POST)([](const crow::request &req)
+                                         {
+        std::string username;
+        if (!verify_authorization_header(req, username))
+        {
+            return crow::response(crow::status::UNAUTHORIZED, mkm::error_str(mkm::ErrorCode::AUTHENTICATION_ERROR));
+        }
+        const crow::query_string& qs = req.url_params;
+        const char* id_str = qs.get("id");
+        if (id_str == nullptr)
+        {
+            return crow::response(crow::status::BAD_REQUEST, "id parameter is missing");
+        }
+        uint64_t id = std::stoull(id_str);
+
+        if (!mkm::delete_moment(username, id))
+        {
+            return crow::response(crow::status::INTERNAL_SERVER_ERROR, mkm::error_str(mkm::ErrorCode::INTERNAL_ERROR));
+        }
+        return crow::response(crow::status::OK);
+    });
+
     CROW_ROUTE(app, "/getuserdetails")
         .methods(crow::HTTPMethod::OPTIONS)([](const crow::request &req)
                                             { return crow::response(crow::status::OK); });
@@ -320,7 +399,12 @@ int main()
             return crow::response(crow::status::UNAUTHORIZED, mkm::error_str(mkm::ErrorCode::AUTHENTICATION_ERROR));
         }
         const crow::query_string& qs = req.url_params;
-        uint64_t id = std::stoi(qs.get("id"));
+        const char* id_str = qs.get("id");
+        if (id_str == nullptr)
+        {
+            return crow::response(crow::status::BAD_REQUEST, "id parameter is missing");
+        }
+        uint64_t id = std::stoull(id_str);
 
         auto result = mkm::get_moment_details(username, id);
         if (std::holds_alternative<mkm::ErrorCode>(result))
@@ -337,12 +421,19 @@ int main()
 
         std::string image_content_hex = s.str();
 
+        std::vector<crow::json::wvalue> feelings_arr;
+        for (const auto& feeling : moment.feelings)
+        {
+            feelings_arr.push_back(feeling);
+        }
+
         crow::json::wvalue resp_obj{
             {"id", moment.id},
             {"username", moment.username},
             {"title", moment.title},
             {"description", moment.description},
             {"date", moment.date},
+            {"feelings", feelings_arr},
             {"image_filename", moment.image_filename},
             {"image_caption", moment.image_caption},
             {"image_data", image_content_hex},

@@ -62,6 +62,9 @@
 {:then moment} 
     <h1>{moment.title}</h1>
     <h3>{new Date(moment.date).toLocaleDateString('en-GB', { year: 'numeric', month: 'short', day: 'numeric' })}</h3>
+    {#if moment.feelings.length > 0}
+        <h3>Feeling {moment.feelings.join(',')}</h3>
+    {/if}
     <figure>
         <img src={getImageData(moment.image_data, moment.image_filename)} alt={moment.image_caption} />
         <figurecaption>{moment.image_caption}</figurecaption>
@@ -93,6 +96,7 @@
     }
     figure img {
         object-fit: contain;
+        max-height: 80vh;
     }
     figurecaption {
         color: gray;

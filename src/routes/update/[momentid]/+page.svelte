@@ -7,14 +7,15 @@
     export let data;
 
     const feelings = ["happy", "sad", "angry", "scared"];
+    const max_description_length = 2000;
 
     let description;
     let selected_image;
-    const max_description_length = 2000;
+    let update_moment_response_status = {response_received: false, is_error: false, message: ""};
 
-    function getDateString(created_date_time) {
-        return new Date(created_date_time).toISOString().substring(0,10);
-    }
+    // function getDateString(created_date_time) {
+    //     return new Date(created_date_time).toISOString().substring(0,10);
+    // }
 
     async function getMoment(momentid) {
         var requestOptions = {
@@ -40,9 +41,13 @@
         return json;
     }
 
-    function handleSubmit() {
+    function handleSubmit(original_moment_data) {
         const form = document.getElementById("updatemoment-form");
         const url = new URL("/updatemoment", PUBLIC_API_URL);
+        const url_search_params = new URLSearchParams({
+            'id': original_moment_data.id
+        });
+        url.search = url_search_params.toString();
 
         const feelings_arr = [];
         document.querySelectorAll("#moment-feelings input").forEach(ele => { if (ele.checked) feelings_arr.push(ele.value); })
@@ -51,6 +56,25 @@
         const form_data = new FormData(form);
         if (feelings_arr.length > 0) {
             form_data.append("moment-feelings", feelings_arr.join(','));
+        }
+
+        if (form_data.get("moment-title") === original_moment_data.title) {
+            form_data.delete("moment-title");
+        }
+        if (form_data.get("moment-description") === original_moment_data.description) {
+            form_data.delete("moment-description");
+        }
+        if (form_data.get("moment-date") === original_moment_data.date) {
+            form_data.delete("moment-date");
+        }
+        const symmetric_difference = feelings_arr
+                 .filter(x => !original_moment_data.feelings.includes(x))
+                 .concat(original_moment_data.feelings.filter(x => !feelings_arr.includes(x)));
+        if (symmetric_difference.length === 0) {
+            form_data.delete("moment-feelings");
+        }
+        if (form_data.get("moment-image-caption") === original_moment_data.image_caption) {
+            form_data.delete("moment-image-caption");
         }
 
         const fetchOptions = {
@@ -65,10 +89,9 @@
         fetch(url.toString(), fetchOptions)
             .then(response => {
                 if (response.ok) {
-                    add_moment_response_status.is_error = false;
-                    add_moment_response_status.message = "Updated moment successfully";
-                    add_moment_response_status.response_received = true;
-                    form.reset();
+                    update_moment_response_status.is_error = false;
+                    update_moment_response_status.message = "Updated moment successfully";
+                    update_moment_response_status.response_received = true;
                     return;
                 }
                 throw new Error(response.statusText, {
@@ -76,24 +99,27 @@
                 });
             })
             .catch(error => {
-                add_moment_response_status.is_error = true;
-                add_moment_response_status.response_received = true;
+                update_moment_response_status.is_error = true;
+                update_moment_response_status.response_received = true;
                 if ("cause" in error) {
-                    add_moment_response_status.message = error.message;
+                    update_moment_response_status.message = error.message;
                 }
                 else {
-                    add_moment_response_status.message = "Failed to update moment - either server is down or some other error occured";
+                    update_moment_response_status.message = "Failed to update moment - either server is down or some other error occured";
                 }
                 // The message will disappear after 10 seconds.
-                setTimeout(() => add_moment_response_status = {response_received: false, is_error: false, message: ""}, 10000);
+                setTimeout(() => update_moment_response_status = {response_received: false, is_error: false, message: ""}, 10000);
             });
     }
 
 </script>
+{#if update_moment_response_status.response_received}
+<FixedStatusMessage is_error={update_moment_response_status.is_error} message={update_moment_response_status.message} />
+{/if}
 {#await getMoment(data.momentid)}
     <p id="loading">Loading...</p>
 {:then moment}
-    <form id="updatemoment-form"  method="post" on:submit|preventDefault={handleSubmit}>
+    <form id="updatemoment-form"  method="post" on:submit|preventDefault={() => handleSubmit(moment)}>
         <label for="moment-title">Title</label>
         <input type="text" id="moment-title" name="moment-title" value={moment.title} />
 
@@ -109,7 +135,7 @@
         <label for="moment-feelings">How do you feel?</label>
         <section id="moment-feelings">
             {#each feelings as feeling}
-                <input type="checkbox" id={feeling} value={feeling} />
+                <input type="checkbox" id={feeling} value={feeling} checked={moment.feelings.includes(feeling)} />
                 <label for={feeling}>{feeling[0].toUpperCase() + feeling.slice(1)}</label>
             {/each}
         </section>
@@ -122,8 +148,13 @@
             <input name="moment-image" id="moment-image" type="file" accept=".png,.jpg" bind:value={selected_image}/>
         </section>
 
-        <label for="moment-image-caption" class:hide-element={moment.image_filename === '' || selected_image === undefined || selected_image === ''}>Image Caption</label>
-        <input type="text" id="moment-image-caption" name="moment-image-caption" class:hide-element={moment.image_filename === '' || selected_image === undefined || selected_image === ''} value={moment.image_caption} />
+        {#if moment.image_filename !== ''}
+            <label for="moment-image-caption">Image Caption</label>
+            <input type="text" id="moment-image-caption" name="moment-image-caption" value={moment.image_caption} required />
+        {:else}
+            <label for="moment-image-caption" class:hide-element={selected_image === undefined || selected_image === ''}>Image Caption</label>
+            <input type="text" id="moment-image-caption" name="moment-image-caption" class:hide-element={selected_image === undefined || selected_image === ''} value={moment.image_caption} required />
+        {/if}
 
         <section id="form-buttons">
             <button type="submit">Save</button>
@@ -149,7 +180,6 @@
     button {
         height: 30px;
     }
-    input[type=submit],
     button {
         border-style: none;
         background-color: rgb(250, 229, 107);

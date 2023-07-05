@@ -8,6 +8,7 @@
     const feelings = ["happy", "sad", "angry", "scared"];
     
     let selected_image;
+    let description = '';
     let add_moment_response_status = {response_received: false, is_error: false, message: ""};
 
     function handleSubmit() {
@@ -74,8 +75,8 @@
     </section>
 
     <label for="moment-description">Description</label>
-    <textarea name="moment-description" id="moment-description" maxlength="2000" placeholder="Your message (max. 2000 characters)" required></textarea>
-    <p id="moment-description-chars-left">Characters left: 0/{max_description_length}</p>
+    <textarea name="moment-description" id="moment-description" maxlength="2000" placeholder="Your message (max. 2000 characters)" bind:value={description} required></textarea>
+    <p id="moment-description-chars-left">Characters left: {max_description_length - description.length}/{max_description_length}</p>
 
     <label for="moment-feelings">How do you feel?</label>
     <section id="moment-feelings">
@@ -91,8 +92,10 @@
     </section>
 
     <!-- Show only if image is added -->
-    <label for="moment-image-caption" class:hide-element={selected_image === undefined}>Image Caption</label>
-    <input type="text" id="moment-image-caption" name="moment-image-caption" class:hide-element={selected_image === undefined} required />
+    {#if selected_image !== undefined && selected_image !== ''}
+        <label for="moment-image-caption">Image Caption</label>
+        <input type="text" id="moment-image-caption" name="moment-image-caption" required />
+    {/if}
 
     <section id="form-buttons">
         <input type="submit" value="Add Moment" />
@@ -144,8 +147,5 @@
         flex-direction: row;
         column-gap: 10px;
         margin-top: 2%;
-    }
-    .hide-element {
-        display: none;
     }
 </style>

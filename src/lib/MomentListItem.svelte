@@ -1,7 +1,12 @@
 <script>
     import { goto } from "$app/navigation";
+    import { PUBLIC_API_URL } from "$env/static/public";
+    import { loggedInUser } from "$lib/stores.js";
+    import FixedStatusMessage from "$lib/FixedStatusMessage.svelte";
     
     export let moment;
+
+    let nodeRef;
 
     let to_delete_moment;
     let delete_confirmation_input_text = '';
@@ -37,6 +42,7 @@
         //     binary += String.fromCharCode( bytes[ i ] );
         // }
 
+        // Thanks to Robin F. (https://stackoverflow.com/a/59339394)
         let binary = "";
         for(let i = 0; i < image_data.length; i++) {
             binary += !(i - 1 & 1) ? String.fromCharCode(parseInt(image_data.substring(i - 1, i + 1), 16)) : ""
@@ -44,11 +50,60 @@
         const base64_encoded = btoa( binary );
         return "data:image/" + file_extension + ";base64," + base64_encoded;
     }
+
+    let delete_moment_response_status = {response_received: false, is_error: false, message: ""};
+    function deleteMoment(momentid) {
+        var requestOptions = {
+            method: 'POST',
+            redirect: 'follow',
+            headers: {
+                "Authorization": "Bearer " + $loggedInUser.access_token
+            }
+        };
+
+        const url = new URL("/deletemoment", PUBLIC_API_URL);
+        const url_search_params = new URLSearchParams({
+            'id': momentid
+        });
+        url.search = url_search_params.toString();
+
+        fetch(url.toString(), requestOptions)
+            .then(response => {
+                if (response.ok) {
+                    delete_moment_response_status.is_error = false;
+                    delete_moment_response_status.message = "Delete moment successfully";
+                    delete_moment_response_status.response_received = true;
+                    to_delete_moment = undefined;
+                    nodeRef.parentNode.removeChild(nodeRef);
+                    return;
+                }
+                throw new Error(response.statusText, {
+                    cause: response.status
+                });
+            })
+            .catch(error => {
+                delete_moment_response_status.is_error = true;
+                delete_moment_response_status.response_received = true;
+                if ("cause" in error) {
+                    delete_moment_response_status.message = error.message;
+                }
+                else {
+                    delete_moment_response_status.message = "Failed to delete moment - either server is down or some other error occured";
+                }
+                // The message will disappear after 10 seconds.
+                setTimeout(() => delete_moment_response_status = {response_received: false, is_error: false, message: ""}, 10000);
+                to_delete_moment = undefined;
+            });
+    }
 </script>
+
+{#if delete_moment_response_status.response_received}
+<FixedStatusMessage is_error={delete_moment_response_status.is_error} message={delete_moment_response_status.message} />
+{/if}
 
 {#if to_delete_moment}
 <section id="delete-dialog">
-    <form>
+    <form id="delete-form"  on:submit|preventDefault={() => deleteMoment(to_delete_moment.id)}>
         <p><b>You are about to delete the moment titled:</b></p>
         <h3>{to_delete_moment.title}</h3>
         <p><b>Deleting a moment will erase all data associated with this moment and cannot be recovered.</b></p>
@@ -62,7 +117,7 @@
 </section>
 {/if}
 
-<section class="moments-list-item">
+<section class="moments-list-item" bind:this={nodeRef}>
     <section class="moments-list-item-image-section">
         <img
             class="moments-list-item-image"

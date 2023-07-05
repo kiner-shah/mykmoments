@@ -63,7 +63,9 @@ CREATE TABLE public.moments (
     image_caption character varying(100),
     feelings character varying(20)[],
     image_data bytea,
-    id bigint NOT NULL
+    id bigint NOT NULL,
+    created_date timestamp with time zone DEFAULT now() NOT NULL,
+    last_modified_date timestamp with time zone DEFAULT now() NOT NULL
 );
 
 
@@ -84,28 +86,6 @@ CREATE TABLE public.users (
 
 
 ALTER TABLE public.users OWNER TO mkm_user;
-
---
--- Data for Name: moments; Type: TABLE DATA; Schema: public; Owner: mkm_user
---
-
-COPY public.moments (username, title, description, moment_date, image_filename, image_caption, feelings, image_data, id) FROM stdin;
-kshah	abc	abc def	2022-06-20	\N	\N	\N	\N	1
-kshah	abc1	abc1 def	2022-06-20	\N	\N	\N	\N	2
-user1	pqr	pqr def	2022-06-20	\N	\N	\N	\N	1
-user1	pqr1	pqr1 def	2022-06-20	\N	\N	\N	\N	2
-\.
-
-
---
--- Data for Name: users; Type: TABLE DATA; Schema: public; Owner: mkm_user
---
-
-COPY public.users (username, fullname, birthdate, emailid, password_hash, account_creation_time) FROM stdin;
-user1	MKM User1	1999-02-02	user1@mkm.domain	$2a$08$Pk.4oxCHu3D8NdNeXLGZUexRx.y2S3cgZ6HI9rS8nqLq6xzpFP7em	2023-06-28 11:48:50.524399+05:30
-kshah	Kiner Shah	1996-05-20	kiner.shah1@gmail.com	$2a$08$d8yaQH0Pu7JWqpUZf.vJGOZPi/EZyWO.muwChcirzEAqdjrLMfg32	2023-06-28 15:12:17.689539+05:30
-\.
-
 
 --
 -- Name: moments moments_pkey; Type: CONSTRAINT; Schema: public; Owner: mkm_user
