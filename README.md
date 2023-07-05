@@ -1,38 +1,52 @@
-# create-svelte
+# MyKMoments
+Store all your precious moments at one place.
 
-Everything you need to build a Svelte project, powered by [`create-svelte`](https://github.com/sveltejs/kit/tree/master/packages/create-svelte).
+# Tech stack
+* Front-end: Svelte.js powered by [`create-svelte`](https://github.com/sveltejs/kit/tree/master/packages/create-svelte).
+* Back-end: C++ 20
+* Database: PostgreSQL
 
-## Creating a project
+# Dependencies
+## Front end
+* Svelte.js
+* Svelte Kit
+## Back end
+* [Crow](https://github.com/CrowCpp/Crow/) - C++ framework for web app/service
+* OpenSSL - for HTTPS
+* ZLib - for compression
+* Standalone ASIO - required by Crow
+* libpq - C library for accessing Postgres databases
+* [libpqxx](https://github.com/jtv/libpqxx) - C++ wrapper library for libpq (Postgres)
+* [jwt-cpp](https://github.com/Thalhammer/jwt-cpp) - for JSON Web Tokens
 
-If you're seeing this, you've probably already done this step. Congrats!
-
-```bash
-# create a new project in the current directory
-npm create svelte@latest
-
-# create a new project in my-app
-npm create svelte@latest my-app
+# Cloning repo
+```
+git clone --recurse-submodules https://github.com/kiner-shah/mykmoments.git
 ```
 
-## Developing
+# Installating some pre-requisites
+```
+sudo apt-get update
 
-Once you've created a project and installed dependencies with `npm install` (or `pnpm install` or `yarn`), start a development server:
+sudo apt-get install libpq-dev libssl-dev zlib1g-dev
 
-```bash
+# For installing postgresql server
+sudo apt-get install postgresql postgresql-contrib
+```
+
+# Note about Crow
+You need to apply a [patch](crow_hack.patch) after cloning Crow because there is one [open issue](https://github.com/CrowCpp/Crow/issues/538) because of which Crow doesn't send proper response for preflight OPTIONS requests.
+
+# Building and running REST API
+```
+cd restapi
+mkdir build && cd build
+cmake ..
+make
+./MyKMomentsRestAPI
+```
+
+# Running front end
+```
 npm run dev
-
-# or start the server and open the app in a new browser tab
-npm run dev -- --open
 ```
-
-## Building
-
-To create a production version of your app:
-
-```bash
-npm run build
-```
-
-You can preview the production build with `npm run preview`.
-
-> To deploy your app, you may need to install an [adapter](https://kit.svelte.dev/docs/adapters) for your target environment.
