@@ -5,6 +5,8 @@
 
     export let data;
 
+    const feeling_emoji_map = {"happy": "😄", "sad": "😢", "angry": "😠", "scared": "😨"}
+
     async function getMoment(momentid) {
         var requestOptions = {
             method: 'GET',
@@ -62,9 +64,11 @@
 {:then moment} 
     <h1>{moment.title}</h1>
     <h3>{new Date(moment.date).toLocaleDateString('en-GB', { year: 'numeric', month: 'short', day: 'numeric' })}</h3>
-    {#if moment.feelings.length > 0}
-        <h3>Feeling {moment.feelings.join(',')}</h3>
-    {/if}
+    <section id="feelings-section">
+        {#each moment.feelings as feeling}
+            <span class="feelings">{feeling_emoji_map[feeling]}</span>
+        {/each}
+    </section>
     <figure>
         <img src={getImageData(moment.image_data, moment.image_filename)} alt={moment.image_caption} />
         <figurecaption>{moment.image_caption}</figurecaption>
@@ -85,6 +89,10 @@
         text-align: center;
         color: gray;
         font-style: italic;
+    }
+    #feelings-section {
+        text-align: center;
+        font-size: 20px;
     }
     figure {
         display: flex;

@@ -250,15 +250,10 @@ int main()
         get_part_value_string_if_present(multi_part_message, "moment-title", moment.title);
         get_part_value_string_if_present(multi_part_message, "moment-description", moment.description);
         get_part_value_string_if_present(multi_part_message, "moment-date", moment.date);
+        get_part_value_string_if_present(multi_part_message, "moment-image-caption", moment.image_caption);
 
-        if (create_file_from_part_value_if_present(multi_part_message, "moment-image", moment.image_filename, moment.image_content))
-        {
-            // If image is present, its caption is required
-            if (!get_part_value_string_if_present(multi_part_message, "moment-image-caption", moment.image_caption))
-            {
-                return crow::response(crow::status::BAD_REQUEST, "Required part 'moment-image-caption' is missing or empty");
-            }
-        }
+        create_file_from_part_value_if_present(multi_part_message, "moment-image", moment.image_filename, moment.image_content);
+
         std::string moment_feelings_str;
         if (get_part_value_string_if_present(multi_part_message, "moment-feelings", moment_feelings_str))
         {
