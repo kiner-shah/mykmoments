@@ -25,7 +25,7 @@
     }
 
     function logout() {
-        sessionStorage.removeItem("loggedInUser");
+        localStorage.removeItem("loggedInUser");
         loggedInUser.set();
         location.href = "/";
     }

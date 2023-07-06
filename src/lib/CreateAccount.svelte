@@ -1,8 +1,7 @@
 <script>
     import { PUBLIC_API_URL } from "$env/static/public";
-    import { goto } from "$app/navigation";
 
-    let createAccountError;
+    let create_account_response_status = {response_received: false, is_error: false, message: ""};
 
     function validateFormAndCreateAccount() {
         const form = document.getElementById("createaccount-form");
@@ -25,24 +24,25 @@
                 body: form_data
             }).then(response => {
                 if (response.ok) {
-                    return response.json();
+                    create_account_response_status.is_error = false;
+                    create_account_response_status.message = "Created account successfully";
+                    create_account_response_status.response_received = true;
+                    return;
                 }
                 throw new Error(response.statusText, {
                     cause: response.status
                 });
-            }).then(jsonObj => {
-                // sessionStorage.setItem("loggedInUser", JSON.stringify(jsonObj));
-                // loggedInUser.set(jsonObj);
-                // goto("/dashboard");
             }).catch(error => {
+                create_account_response_status.is_error = true;
+                create_account_response_status.response_received = true;
                 if ("cause" in error) {
-                    createAccountError = error.message;
+                    create_account_response_status.message = error.message;
                 }
                 else {
-                    createAccountError = "Failed to create account - either server is down or some other error occured";
+                    create_account_response_status.message = "Failed to create account - either server is down or some other error occured";
                 }
                 // The message will disappear after 10 seconds.
-                setTimeout(() => createAccountError = undefined, 10000);
+                setTimeout(() => create_account_response_status = {response_received: false, is_error: false, message: ""}, 10000);
             });
         };
         sendRequest();
@@ -51,8 +51,8 @@
 <h1>Create Account</h1>
 <section>
     <form id="createaccount-form" method="post" on:submit|preventDefault={validateFormAndCreateAccount}>
-        {#if createAccountError !== undefined}
-        <p id="error-message" bind:innerHTML={createAccountError} contenteditable="false"></p>
+        {#if create_account_response_status.response_received}
+        <p id="create-account-status" class:error-message={create_account_response_status.is_error} bind:innerHTML={create_account_response_status.message} contenteditable="false"></p>
         {/if}
 
         <label for="fullname">Full name</label>
@@ -108,12 +108,15 @@
     section form input[type=submit]:hover {
         background-color: rgb(238, 218, 103);
     }
-    #error-message {
-        background-color: rgb(133, 48, 48);
+    #create-account-status {
+        background-color: darkseagreen;
         color: white;
         width: 100%;
         border: none;
         text-align: center;
         padding: 1%;
+    }
+    .error-message {
+        background-color: rgb(133, 48, 48);
     }
 </style>

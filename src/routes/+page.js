@@ -4,7 +4,7 @@ import { redirect } from "@sveltejs/kit";
 export const ssr = false;
 
 export function load() {
-    const user = sessionStorage.getItem("loggedInUser");
+    const user = localStorage.getItem("loggedInUser");
     if (user) {
         const userObj = JSON.parse(user);
         loggedInUser.set(userObj);

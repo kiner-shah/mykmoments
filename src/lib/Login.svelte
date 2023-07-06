@@ -24,7 +24,7 @@
                     cause: response.status
                 });
             }).then(jsonObj => {
-                sessionStorage.setItem("loggedInUser", JSON.stringify(jsonObj));
+                localStorage.setItem("loggedInUser", JSON.stringify(jsonObj));
                 loggedInUser.set(jsonObj);
                 goto("/dashboard");
             }).catch(error => {

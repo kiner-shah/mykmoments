@@ -70,6 +70,7 @@
         fetch(url.toString(), requestOptions)
             .then(response => {
                 if (response.ok) {
+                    setTimeout(() => {console.log("Reloading page..."); location.reload();}, 1000);
                     delete_moment_response_status.is_error = false;
                     delete_moment_response_status.message = "Delete moment successfully";
                     delete_moment_response_status.response_received = true;
