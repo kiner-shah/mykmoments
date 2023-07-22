@@ -22,6 +22,7 @@ Store all your precious moments at one place.
 # Cloning repo
 ```
 git clone --recurse-submodules https://github.com/kiner-shah/mykmoments.git
+git submodule update --init --depth 3 --recursive --remote --jobs 4
 ```
 
 # Installating some pre-requisites
