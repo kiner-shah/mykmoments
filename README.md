@@ -80,6 +80,8 @@ To import the schema to the database from the file above, do the following:
     ```
     psql -d mkm_db -U mkm_user -f ../mkm_db.sql -L logfile.txt -W
     ```
+## Inspecting database contents
+Run `psql -d mkm_db -U mkm_user -W`, enter your password for `mkm_user` and then in the `psql` terminal, enter the queries you want to run.
 # Building and running REST API
 
 ## Change the database password in db_utils.cpp
