@@ -154,10 +154,6 @@ int main()
     // std::cout << "Connected to server with version " << c.server_version() << '\n';
 
     CROW_ROUTE(app, "/gettotalmoments")
-        .methods(crow::HTTPMethod::OPTIONS)([](const crow::request &req)
-                                            { return crow::response(crow::status::OK); });
-
-    CROW_ROUTE(app, "/gettotalmoments")
         .methods(crow::HTTPMethod::GET)([](const crow::request &req)
                                         {
         std::string username;
@@ -169,10 +165,6 @@ int main()
         crow::json::wvalue resp_json{ {"total_moments", mkm::get_moment_count(username)} };
         return crow::response(crow::status::OK, resp_json);
     });
-
-    CROW_ROUTE(app, "/addmoment")
-        .methods(crow::HTTPMethod::OPTIONS)([](const crow::request &req)
-                                            { return crow::response(crow::status::OK); });
 
     CROW_ROUTE(app, "/addmoment")
         .methods(crow::HTTPMethod::POST)([](const crow::request &req)
@@ -225,10 +217,6 @@ int main()
     });
 
     CROW_ROUTE(app, "/updatemoment")
-        .methods(crow::HTTPMethod::OPTIONS)([](const crow::request &req)
-                                            { return crow::response(crow::status::OK); });
-
-    CROW_ROUTE(app, "/updatemoment")
         .methods(crow::HTTPMethod::POST)([](const crow::request &req)
                                          {
         mkm::Moment moment;
@@ -272,10 +260,6 @@ int main()
     });
 
     CROW_ROUTE(app, "/deletemoment")
-        .methods(crow::HTTPMethod::OPTIONS)([](const crow::request &req)
-                                            { return crow::response(crow::status::OK); });
-
-    CROW_ROUTE(app, "/deletemoment")
         .methods(crow::HTTPMethod::POST)([](const crow::request &req)
                                          {
         std::string username;
@@ -297,10 +281,6 @@ int main()
         }
         return crow::response(crow::status::OK);
     });
-
-    CROW_ROUTE(app, "/getuserdetails")
-        .methods(crow::HTTPMethod::OPTIONS)([](const crow::request &req)
-                                            { return crow::response(crow::status::OK); });
 
     CROW_ROUTE(app, "/getuserdetails")
         .methods(crow::HTTPMethod::GET)([](const crow::request &req)
@@ -327,10 +307,6 @@ int main()
         return crow::response(crow::status::OK, resp_json);
     });
 
-    CROW_ROUTE(app, "/getmomentlist")
-        .methods(crow::HTTPMethod::OPTIONS)([](const crow::request &req)
-                                            { return crow::response(crow::status::OK); });
-    
     CROW_ROUTE(app, "/getmomentlist")
         .methods(crow::HTTPMethod::GET)([](const crow::request &req)
                                             {
@@ -380,10 +356,6 @@ int main()
         }
         return crow::response(crow::status::OK, crow::json::wvalue({ {"moments", moments_json_list} }));
     });
-
-    CROW_ROUTE(app, "/getmoment")
-        .methods(crow::HTTPMethod::OPTIONS)([](const crow::request &req)
-                                            { return crow::response(crow::status::OK); });
 
     CROW_ROUTE(app, "/getmoment")
         .methods(crow::HTTPMethod::GET)([](const crow::request &req)

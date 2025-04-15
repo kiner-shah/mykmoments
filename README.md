@@ -38,9 +38,11 @@ git submodule update --init --depth 3 --recursive --jobs 4
 ```
 
 # Note about Crow
-You need to apply a [patch](crow_hack.patch) after cloning Crow because there is one [open issue](https://github.com/CrowCpp/Crow/issues/538) because of which Crow doesn't send proper response for preflight OPTIONS requests.
+~~You need to apply a [patch](crow_hack.patch) after cloning Crow because there is one [open issue](https://github.com/CrowCpp/Crow/issues/538) because of which Crow doesn't send proper response for preflight OPTIONS requests.~~
 
-**UPDATE**: Crow has released new versions since then and the issue above is now fixed, so the patch may not be needed anymore.
+~~**UPDATE**: Crow has released new versions since then and the issue above is now fixed, so the patch may not be needed anymore.~~
+
+Crow has been updated to new version v1.2.1.
 
 # Database schema
 Database schema is present [here](restapi/mkm_db.sql).
